@@ -1,23 +1,24 @@
-# 🤖 AI Smart Code Mentor - VS Code Extension
+# 🐛 DEBUGXIA - Intelligent Code Debugging for VS Code
 
-An intelligent AI assistant that detects code errors, explains them in simple language, and suggests improvements across **11+ programming languages**.
+Advanced AI-powered code debugging and error analysis. Detects errors, explains them clearly, and suggests improvements across **11+ programming languages**.
 
-## ✨ Features
+## ✨ Key Features
 
-### 🎯 Error Detection & Analysis
+### 🎯 Intelligent Error Detection
 - **Multi-Language Support**: Python, JavaScript, TypeScript, Java, C++, C#, PHP, Ruby, Go, Rust, Swift
-- **Real-time Error Detection**: Automatically analyzes your code as you write
-- **Intelligent Explanation**: Get human-readable explanations for complex errors
-- **Context-Aware Help**: Understanding why errors happen and how to fix them
+- **Real-time Analysis**: Automatically analyzes code as you write
+- **Clear Explanations**: Human-readable explanations for complex errors
+- **Context-Aware Help**: Understand why errors occur and how to fix them
 
-### 💡 Smart Suggestions
-- **Code Improvement Tips**: Get suggestions for better coding practices
-- **Optimization Recommendations**: Performance and readability improvements
-- **Best Practices**: Learn industry standards from AI analysis
+### 💡 Smart Code Analysis
+- **Error Scoring**: Quantified error severity (0-100)
+- **Code Quality Metrics**: Measure code quality standards
+- **Optimization Suggestions**: Performance and readability improvements
+- **Best Practices**: Learn industry standards from AI
 
-### 📊 Analytics Dashboard
-- **Track Your Progress**: See your coding improvement over time
-- **Error History**: Review all past errors and fixes
+### 📊 Workspace Scanning
+- **Batch Analysis**: Scans entire workspace for errors
+- **Multi-File Support**: Analyzes multiple error files simultaneously
 - **Code Quality Score**: Objective measure of your code quality
 - **Daily Stats**: Monitor how many errors you've fixed
 

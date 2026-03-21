@@ -1,5 +1,5 @@
 /**
- * AI Smart Code Mentor - VS Code Extension
+ * DEBUGXIA - Intelligent Code Debugging Extension
  * Main extension entry point
  */
 
@@ -13,17 +13,19 @@ import { DashboardWebviewProvider } from "./webviews/dashboardWebviewProvider";
 import { ExtensionConfig } from "./types";
 import { StorageService } from "./services/storageService";
 import { displayBanner, SCANNER_ACTIVE } from "./ascii";
+import { AIAnalysisService } from "./services/aiAnalysisService";
 
 let apiClient: ApiClient;
 let errorDetector: ErrorDetector;
 let storageService: StorageService;
+let aiAnalysisService: AIAnalysisService;
 let scannerTerminal: vscode.Terminal | undefined;
 
 export function activate(context: vscode.ExtensionContext) {
   try {
     // Display DEBUGXIA banner
     console.log(displayBanner());
-    console.log("🚀 Activating AI Smart Code Mentor Extension...");
+    console.log("🚀 Activating DEBUGXIA Extension...");
 
     // Initialize storage service
     storageService = new StorageService(context);
@@ -40,15 +42,16 @@ export function activate(context: vscode.ExtensionContext) {
 
     if (!config.apiUrl || !config.apiKey) {
       vscode.window.showWarningMessage(
-        'AI Code Mentor: API settings not configured. Some features may be limited. Check VS Code Settings > AI Code Mentor.'
+        'DEBUGXIA: API settings not configured. Some features may be limited. Check VS Code Settings > DEBUGXIA.'
       );
       console.warn("⚠️  API Configuration missing - some features will be disabled");
     }
 
     // Initialize services
     apiClient = new ApiClient(config.apiUrl || "http://localhost:8000", config.apiKey || "");
+    aiAnalysisService = new AIAnalysisService();
     errorDetector = new ErrorDetector();
-    console.log("✅ API Client and Error Detector initialized");
+    console.log("✅ API Client, AI Analysis Service, and Error Detector initialized");
 
     // Register UI providers
     const errorListProvider = new ErrorListProvider(errorDetector);
@@ -100,8 +103,8 @@ export function activate(context: vscode.ExtensionContext) {
 
     context.subscriptions.push(configListener);
     
-    console.log("✨ AI Smart Code Mentor Extension fully activated!");
-    vscode.window.showInformationMessage("🚀 AI Smart Code Mentor is ready! Use Ctrl+Shift+L to open the panel.");
+    console.log("✨ DEBUGXIA Extension fully activated!");
+    vscode.window.showInformationMessage("🚀 DEBUGXIA is ready! Press Ctrl+Shift+Z to analyze code.");
     
   } catch (error) {
     console.error("❌ Failed to activate extension:", error);
@@ -146,7 +149,7 @@ function registerCommands(
   errorListProvider: ErrorListProvider
 ) {
   try {
-    // Open AI Code Mentor Panel
+    // Open DEBUGXIA Analysis Panel
     const openPanelCmd = vscode.commands.registerCommand(
       "aiCodeMentor.openPanel",
       async () => {
@@ -324,13 +327,38 @@ function registerCommands(
     }
   );
 
+  // Test API Key
+  const testApiKeyCmd = vscode.commands.registerCommand(
+    "aiCodeMentor.testApiKey",
+    async () => {
+      try {
+        console.log("🧪 Testing API Key...");
+        vscode.window.showInformationMessage("🧪 Testing DEBUGXIA API Key... Check Debug Console for results");
+        
+        const isValid = await aiAnalysisService.testApiKey();
+        
+        if (isValid) {
+          vscode.window.showInformationMessage("✅ API Key is VALID! DEBUGXIA is ready to analyze code.");
+          console.log("🎉 API Key test PASSED!");
+        } else {
+          vscode.window.showErrorMessage("❌ API Key test FAILED. Check Debug Console for error details.");
+          console.error("❌ API Key test failed - see console output above for details");
+        }
+      } catch (error) {
+        console.error("❌ Error testing API key:", error);
+        vscode.window.showErrorMessage(`Error testing API key: ${error}`);
+      }
+    }
+  );
+
   context.subscriptions.push(
     openPanelCmd,
     explainErrorCmd,
     fixCodeCmd,
     analyzeCodeCmd,
     openChatCmd,
-    viewDashboardCmd
+    viewDashboardCmd,
+    testApiKeyCmd
   );
   } catch (error) {
     console.error("❌ Error registering commands:", error);
@@ -434,6 +462,27 @@ function watchEditorAndTerminal(context: vscode.ExtensionContext) {
   if (config.enableAutoAnalysis) {
     const onSave = vscode.workspace.onDidSaveTextDocument(async (document) => {
       const errors = await errorDetector.analyzeDocument(document);
+      
+      // Perform AI analysis for accurate statistics
+      const aiAnalysis = await aiAnalysisService.analyzeCode(
+        document.getText(),
+        document.languageId,
+        document.fileName
+      );
+      
+      // Save AI analysis results for dashboard statistics
+      await storageService.saveAnalysis({
+        fileName: document.fileName,
+        language: document.languageId,
+        errorScore: aiAnalysis.errorScore,
+        codeQualityScore: aiAnalysis.codeQualityScore,
+        optimizationScore: aiAnalysis.optimizationScore,
+        summary: aiAnalysis.summary,
+        issues: aiAnalysis.issues,
+        suggestions: aiAnalysis.suggestions,
+        errorCount: errors.length,
+      });
+      
       if (errors.length > 0) {
         errorDetector.highlightErrors(document, errors);
 
@@ -509,7 +558,7 @@ function initializeScannerTerminal(context: vscode.ExtensionContext) {
 }
 
 export function deactivate() {
-  console.log("AI Smart Code Mentor extension deactivated");
+  console.log("DEBUGXIA extension deactivated");
   if (scannerTerminal) {
     scannerTerminal.dispose();
   }

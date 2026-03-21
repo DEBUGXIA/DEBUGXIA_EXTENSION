@@ -64,12 +64,28 @@ export class StorageService {
   }
 
   /**
-   * Save error history
+   * Save error history with AI analysis
    */
   async saveError(errorData: any): Promise<void> {
     const errors = this.getSetting<any[]>("errorHistory", []);
     errors.push({ ...errorData, timestamp: Date.now() });
     await this.saveSetting("errorHistory", errors.slice(-100)); // Keep last 100
+  }
+
+  /**
+   * Save AI analysis results for statistics
+   */
+  async saveAnalysis(analysisData: any): Promise<void> {
+    const analyses = this.getSetting<any[]>("analysisHistory", []);
+    analyses.push({ ...analysisData, timestamp: Date.now() });
+    await this.saveSetting("analysisHistory", analyses.slice(-50)); // Keep last 50
+  }
+
+  /**
+   * Get all analysis history for statistics
+   */
+  getAnalysisHistory(): any[] {
+    return this.getSetting<any[]>("analysisHistory", []);
   }
 
   /**

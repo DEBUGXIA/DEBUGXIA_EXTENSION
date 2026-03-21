@@ -25,6 +25,12 @@ export const SCANNER_STARTING = `
        └─ Ready to detect issues
 `;
 
+export const DEBUGXIA_BANNER = `
+████████████████████████████████████████████████████
+█  DEBUGXIA - Advanced Code Debugging & Analysis  █
+████████████████████████████████████████████████████
+`;
+
 export const SCANNER_ACTIVE = `
     ✅ DEBUGXIA Scanner Active
        └─ Watching for errors in real-time...

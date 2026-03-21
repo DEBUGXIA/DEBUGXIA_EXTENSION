@@ -65,23 +65,11 @@ export class DashboardWebviewProvider implements vscode.WebviewPanelSerializer {
     const userId = this.storageService.getUserId();
     const analytics = await this.apiClient.getUserAnalytics(userId);
     const errorHistory = this.storageService.getErrorHistory();
+    const analysisHistory = this.storageService.getAnalysisHistory();
 
-    const stats = {
-      totalErrors: errorHistory.length,
-      fixedErrors: errorHistory.filter((e) => e.fixed).length,
-      codeQualityScore: Math.max(
-        50,
-        100 - errorHistory.length * 2
-      ),
-      improvementRate:
-        errorHistory.length > 0
-          ? Math.round(
-              (errorHistory.filter((e) => e.fixed).length /
-                errorHistory.length) *
-                100
-            )
-          : 0,
-    };
+    // Calculate AI-driven statistics from analysis history
+    const stats = this.calculateAIStats(analysisHistory, errorHistory);
+
 
     return `
       <!DOCTYPE html>
@@ -319,16 +307,16 @@ export class DashboardWebviewProvider implements vscode.WebviewPanelSerializer {
 
         <div class="grid">
           <div class="stat-card">
-            <div class="stat-value">${stats.totalErrors}</div>
-            <div class="stat-label">Total Errors Found</div>
+            <div class="stat-value">${stats.errorScore}</div>
+            <div class="stat-label">Error Score (AI)</div>
           </div>
           <div class="stat-card">
-            <div class="stat-value">${stats.fixedErrors}</div>
-            <div class="stat-label">Errors Fixed</div>
+            <div class="stat-value">${stats.codeQualityScore}</div>
+            <div class="stat-label">Code Quality (AI)</div>
           </div>
           <div class="stat-card">
-            <div class="stat-value">${stats.codeQualityScore}%</div>
-            <div class="stat-label">Code Quality Score</div>
+            <div class="stat-value">${stats.optimizationScore}</div>
+            <div class="stat-label">Optimization (AI)</div>
           </div>
           <div class="stat-card">
             <div class="stat-value">${stats.improvementRate}%</div>
@@ -337,20 +325,34 @@ export class DashboardWebviewProvider implements vscode.WebviewPanelSerializer {
         </div>
 
         <div class="section">
-          <div class="section-title">⚡ Code Quality Score</div>
+          <div class="section-title">⚡ AI Analysis Scores</div>
           <div class="chart-container">
             <div class="bar">
-              <div class="bar-label">Overall</div>
+              <div class="bar-label">Error Score</div>
+              <div class="bar-value">
+                <div class="bar-fill" style="width: ${stats.errorScore}%"></div>
+              </div>
+              <div class="bar-number">${stats.errorScore}</div>
+            </div>
+            <div class="bar">
+              <div class="bar-label">Code Quality</div>
               <div class="bar-value">
                 <div class="bar-fill" style="width: ${stats.codeQualityScore}%"></div>
               </div>
-              <div class="bar-number">${stats.codeQualityScore}%</div>
+              <div class="bar-number">${stats.codeQualityScore}</div>
+            </div>
+            <div class="bar">
+              <div class="bar-label">Optimization</div>
+              <div class="bar-value">
+                <div class="bar-fill" style="width: ${stats.optimizationScore}%"></div>
+              </div>
+              <div class="bar-number">${stats.optimizationScore}</div>
             </div>
           </div>
         </div>
 
         <div class="section">
-          <div class="section-title">📈 Recent Activity</div>
+          <div class="section-title">📈 Performance Metrics</div>
           <div class="chart-container">
             <div class="bar">
               <div class="bar-label">Total Errors</div>
@@ -365,6 +367,20 @@ export class DashboardWebviewProvider implements vscode.WebviewPanelSerializer {
                 <div class="bar-fill" style="width: ${stats.improvementRate}%"></div>
               </div>
               <div class="bar-number">${stats.fixedErrors}</div>
+            </div>
+            <div class="bar">
+              <div class="bar-label">Trend</div>
+              <div class="bar-value">
+                <div class="bar-fill" style="width: 100%; background: ${stats.trend === 'improving' ? '#20c997' : stats.trend === 'declining' ? '#dc3545' : '#ffc107'};"></div>
+              </div>
+              <div class="bar-number">${stats.trend}</div>
+            </div>
+            <div class="bar">
+              <div class="bar-label">Analyses Done</div>
+              <div class="bar-value">
+                <div class="bar-fill" style="width: ${Math.min(100, stats.analysisCount * 10)}%"></div>
+              </div>
+              <div class="bar-number">${stats.analysisCount}</div>
             </div>
           </div>
         </div>
@@ -415,4 +431,66 @@ export class DashboardWebviewProvider implements vscode.WebviewPanelSerializer {
       </html>
     `;
   }
+
+  /**
+   * Calculate AI-driven statistics from analysis history
+   * Returns accurate summary metrics based on actual AI analysis
+   */
+  private calculateAIStats(analysisHistory: any[], errorHistory: any[]) {
+    if (analysisHistory.length === 0) {
+      // Fallback if no AI analysis available
+      return {
+        totalErrors: errorHistory.length,
+        fixedErrors: errorHistory.filter((e) => e.fixed).length,
+        errorScore: 0, // Will be 0 if no analysis
+        codeQualityScore: 50,
+        optimizationScore: 45,
+        improvementRate: errorHistory.length > 0
+          ? Math.round(
+              (errorHistory.filter((e) => e.fixed).length / errorHistory.length) * 100
+            )
+          : 0,
+      };
+    }
+
+    // Calculate averages from AI analysis
+    const totalAnalyses = analysisHistory.length;
+    const avgErrorScore = Math.round(
+      analysisHistory.reduce((sum, a) => sum + (a.errorScore || 0), 0) / totalAnalyses
+    );
+    const avgCodeQualityScore = Math.round(
+      analysisHistory.reduce((sum, a) => sum + (a.codeQualityScore || 0), 0) / totalAnalyses
+    );
+    const avgOptimizationScore = Math.round(
+      analysisHistory.reduce((sum, a) => sum + (a.optimizationScore || 0), 0) / totalAnalyses
+    );
+
+    // Calculate improvement rate from fixed errors
+    const fixedErrorsCount = errorHistory.filter((e) => e.fixed).length;
+    const improvementRate = errorHistory.length > 0
+      ? Math.round((fixedErrorsCount / errorHistory.length) * 100)
+      : 0;
+
+    // Calculate trend (improving or degrading)
+    const recentAnalyses = analysisHistory.slice(-5);
+    const olderAnalyses = analysisHistory.slice(-10, -5);
+    const recentAvg = recentAnalyses.length > 0
+      ? Math.round(recentAnalyses.reduce((sum, a) => sum + (a.codeQualityScore || 0), 0) / recentAnalyses.length)
+      : avgCodeQualityScore;
+    const olderAvg = olderAnalyses.length > 0
+      ? Math.round(olderAnalyses.reduce((sum, a) => sum + (a.codeQualityScore || 0), 0) / olderAnalyses.length)
+      : avgCodeQualityScore;
+
+    return {
+      totalErrors: errorHistory.length,
+      fixedErrors: fixedErrorsCount,
+      errorScore: avgErrorScore,
+      codeQualityScore: avgCodeQualityScore,
+      optimizationScore: avgOptimizationScore,
+      improvementRate: improvementRate,
+      trend: recentAvg > olderAvg ? "improving" : recentAvg < olderAvg ? "declining" : "stable",
+      analysisCount: totalAnalyses,
+    };
+  }
 }
+

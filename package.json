@@ -1,17 +1,17 @@
 {
-  "name": "ai-smart-code-mentor",
-  "displayName": "AI Smart Code Mentor",
-  "description": "An intelligent AI assistant that detects code errors, explains them in simple language, and suggests improvements in VS Code",
+  "name": "debugxia",
+  "displayName": "DEBUGXIA",
+  "description": "DEBUGXIA - Intelligent code debugging and error analysis for VS Code. Detects errors, explains them clearly, and suggests improvements automatically.",
   "version": "0.1.0",
-  "publisher": "ai-code-mentor",
+  "publisher": "debugxia",
   "repository": {
     "type": "git",
-    "url": "https://github.com/yourusername/ai-smart-code-mentor"
+    "url": "https://github.com/yourusername/debugxia"
   },
   "bugs": {
-    "url": "https://github.com/yourusername/ai-smart-code-mentor/issues"
+    "url": "https://github.com/yourusername/debugxia/issues"
   },
-  "homepage": "https://aicodementor.com",
+  "homepage": "https://debugxia.com",
   "license": "MIT",
   "engines": {
     "vscode": "^1.85.0"
@@ -33,48 +33,49 @@
     "developer-tools"
   ],
   "activationEvents": [
-    "onStartupFinished",
-    "onLanguage",
-    "onCommand:aiCodeMentor.openPanel",
-    "onCommand:aiCodeMentor.explainError",
-    "onCommand:aiCodeMentor.fixCode"
+    "onStartupFinished"
   ],
   "main": "./dist/extension.js",
   "contributes": {
     "commands": [
       {
         "command": "aiCodeMentor.openPanel",
-        "title": "AI Code Mentor: Open Panel",
+        "title": "DEBUGXIA: Open Analysis Panel",
         "icon": "$(sparkle)"
       },
       {
         "command": "aiCodeMentor.explainError",
-        "title": "AI Code Mentor: Explain Error"
+        "title": "DEBUGXIA: Explain Error"
       },
       {
         "command": "aiCodeMentor.fixCode",
-        "title": "AI Code Mentor: Fix with AI"
+        "title": "DEBUGXIA: Fix with AI"
       },
       {
         "command": "aiCodeMentor.analyzeCode",
-        "title": "AI Code Mentor: Analyze Code"
+        "title": "DEBUGXIA: Analyze Code"
       },
       {
         "command": "aiCodeMentor.openChat",
-        "title": "AI Code Mentor: Open Chat",
+        "title": "DEBUGXIA: Open Analysis",
         "icon": "$(comment-discussion)"
       },
       {
         "command": "aiCodeMentor.viewDashboard",
-        "title": "AI Code Mentor: View Dashboard",
+        "title": "DEBUGXIA: View Dashboard",
         "icon": "$(dashboard)"
+      },
+      {
+        "command": "aiCodeMentor.testApiKey",
+        "title": "DEBUGXIA: Test API Key",
+        "icon": "$(debug-start)"
       }
     ],
     "viewsContainers": {
       "activitybar": [
         {
           "id": "aiCodeMentor",
-          "title": "AI Code Mentor",
+          "title": "DEBUGXIA",
           "icon": "resources/icon.svg"
         }
       ]
@@ -159,7 +160,7 @@
       }
     ],
     "configuration": {
-      "title": "AI Code Mentor",
+      "title": "DEBUGXIA",
       "properties": {
         "aiCodeMentor.apiUrl": {
           "type": "string",
