@@ -142,20 +142,20 @@
     "keybindings": [
       {
         "command": "aiCodeMentor.openPanel",
-        "key": "ctrl+shift+l",
-        "mac": "cmd+shift+l",
+        "key": "ctrl+alt+m",
+        "mac": "cmd+alt+m",
         "when": "editorTextFocus"
       },
       {
         "command": "aiCodeMentor.explainError",
-        "key": "ctrl+shift+e",
-        "mac": "cmd+shift+e",
+        "key": "ctrl+alt+e",
+        "mac": "cmd+alt+e",
         "when": "editorTextFocus"
       },
       {
         "command": "aiCodeMentor.openChat",
-        "key": "ctrl+shift+a",
-        "mac": "cmd+shift+a"
+        "key": "ctrl+shift+z",
+        "mac": "cmd+shift+z"
       }
     ],
     "configuration": {

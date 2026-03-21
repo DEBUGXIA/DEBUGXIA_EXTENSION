@@ -160,20 +160,24 @@ function registerCommands(
           const errors = await errorDetector.analyzeDocument(editor.document);
           if (errors.length === 0) {
             vscode.window.showInformationMessage("No errors found in this file!");
-        return;
-      }
+            return;
+          }
 
-      // Show errors in Quick Pick
-      const selected = await vscode.window.showQuickPick(
-        errors.map((e) => `Line ${e.line}: ${e.errorType} - ${e.errorMessage}`),
-        { placeHolder: "Select an error to analyze..." }
-      );
+          // Show errors in Quick Pick
+          const selected = await vscode.window.showQuickPick(
+            errors.map((e) => `Line ${e.line}: ${e.errorType} - ${e.errorMessage}`),
+            { placeHolder: "Select an error to analyze..." }
+          );
 
-      if (selected) {
-        vscode.commands.executeCommand("aiCodeMentor.explainError");
+          if (selected) {
+            vscode.commands.executeCommand("aiCodeMentor.explainError");
+          }
+        } catch (error) {
+          console.error("Error in openPanelCmd:", error);
+          vscode.window.showErrorMessage(`Error: ${error}`);
+        }
       }
-    }
-  );
+    );
 
   // Explain Error
   const explainErrorCmd = vscode.commands.registerCommand(
