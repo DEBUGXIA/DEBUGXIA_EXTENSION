@@ -37,14 +37,19 @@ Advanced AI-powered code debugging and error analysis. Detects errors, explains 
 
 ### Installation
 
-1. Install from VS Code Marketplace: **"AI Smart Code Mentor"**
-2. Open VS Code Settings (`Ctrl+,` / `Cmd+,`)
-3. Search for "AI Code Mentor"
-4. Configure API settings:
-   ```
-   API URL: http://localhost:8000 (or your backend URL)
-   API Key: Your authentication key
-   ```
+1. Install from VS Code Marketplace: **"DEBUGXIA"**
+2. Clone or download this repository
+3. **Setup OpenRouter API Key:**
+   - Get your free API key from [OpenRouter](https://openrouter.ai/keys)
+   - Copy `.env.example` to `.env`:
+     ```bash
+     cp .env.example .env
+     ```
+   - Open `.env` and add your API key:
+     ```
+     OPENROUTER_API_KEY=your_key_here
+     ```
+   - ⚠️ **IMPORTANT:** `.env` is gitignored - never commit it! Keep your API key private.
 
 ### Usage
 
@@ -117,37 +122,28 @@ extension/
 }
 ```
 
-## 🔌 Backend Integration
+## 🔌 AI Integration
 
-The extension connects to a FastAPI backend for:
+The extension uses **OpenRouter API** with the GPT-4o-mini model for intelligent code analysis:
 
-### API Endpoints Required
+### How It Works
 
-```
-POST /api/v1/health
-  Check backend availability
+1. **Fast Path** (Instant): Local syntax detection catches obvious errors
+2. **Accurate Path** (1-2s): AI analysis provides detailed insights using OpenRouter
+3. **Cached Results** (5 min): Results cached to avoid redundant API calls
+4. **Analysis History**: Stores analysis results for statistics and trends
 
-POST /api/v1/analyze/error
-  Request: { code, language, errorType, errorMessage, userId }
-  Response: { errorType, explanation, why, solution, exampleCode, tips[] }
+### API Security
 
-POST /api/v1/suggestions
-  Request: { code, language, userId }
-  Response: { id, type, title, description, originalCode, suggestedCode }
+- ✅ API key stored in `.env` (never committed)
+- ✅ `.gitignore` protects sensitive credentials
+- ✅ No hardcoded secrets in source code
+- ✅ Environment variables loaded at runtime
 
-POST /api/v1/analyze/terminal-error
-  Request: { errorOutput, userId }
-  Response: AI explanation
+### Supported Services
 
-POST /api/v1/chat
-  Request: { userId, message, context }
-  Response: { reply }
-
-GET /api/v1/analytics/{userId}
-  Response: { userId, totalErrors, fixedErrors, codeQualityScore, improvementPercentage }
-
-POST /api/v1/errors/log/{userId}
-  Request: { language, errorType, errorMessage, severity, file, line }
+- **OpenRouter**: Full support via OpenRouter API
+- **Fallback**: Local syntax detection if API unavailable
   Response: { success }
 
 POST /api/v1/fixes/apply/{userId}

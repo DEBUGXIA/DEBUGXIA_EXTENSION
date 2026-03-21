@@ -23,8 +23,10 @@ export class AIAnalysisService {
   private analysisCache: Map<string, CodeAnalysis> = new Map();
   private cacheTimeout: number = 5 * 60 * 1000; // 5 minutes
 
-  constructor(apiKey: string = "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") {
-    this.apiKey = apiKey;
+  constructor(apiKey?: string) {
+    // Load API key from environment variable or use provided value
+    this.apiKey = apiKey || process.env.OPENROUTER_API_KEY || "";
+    
     this.client = axios.create({
       baseURL: this.apiUrl,
       timeout: 60000,

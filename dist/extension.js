@@ -16148,12 +16148,12 @@ var ContextDetector = class {
 // src/services/aiAnalysisService.ts
 var AIAnalysisService = class {
   // 5 minutes
-  constructor(apiKey = "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") {
+  constructor(apiKey) {
     this.apiUrl = "https://openrouter.ai/api/v1";
     this.model = "openai/gpt-4o-mini";
     this.analysisCache = /* @__PURE__ */ new Map();
     this.cacheTimeout = 5 * 60 * 1e3;
-    this.apiKey = apiKey;
+    this.apiKey = apiKey || process.env.OPENROUTER_API_KEY || "";
     this.client = axios_default.create({
       baseURL: this.apiUrl,
       timeout: 6e4,
