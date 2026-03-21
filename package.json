@@ -1,0 +1,240 @@
+{
+  "name": "ai-smart-code-mentor",
+  "displayName": "AI Smart Code Mentor",
+  "description": "An intelligent AI assistant that detects code errors, explains them in simple language, and suggests improvements in VS Code",
+  "version": "0.1.0",
+  "publisher": "ai-code-mentor",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/ai-smart-code-mentor"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/ai-smart-code-mentor/issues"
+  },
+  "homepage": "https://aicodementor.com",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Debuggers",
+    "AI",
+    "Linters",
+    "Education"
+  ],
+  "keywords": [
+    "ai",
+    "debugging",
+    "code-analysis",
+    "error-explanation",
+    "code-mentor",
+    "copilot",
+    "developer-tools"
+  ],
+  "activationEvents": [
+    "onStartupFinished",
+    "onLanguage",
+    "onCommand:aiCodeMentor.openPanel",
+    "onCommand:aiCodeMentor.explainError",
+    "onCommand:aiCodeMentor.fixCode"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "aiCodeMentor.openPanel",
+        "title": "AI Code Mentor: Open Panel",
+        "icon": "$(sparkle)"
+      },
+      {
+        "command": "aiCodeMentor.explainError",
+        "title": "AI Code Mentor: Explain Error"
+      },
+      {
+        "command": "aiCodeMentor.fixCode",
+        "title": "AI Code Mentor: Fix with AI"
+      },
+      {
+        "command": "aiCodeMentor.analyzeCode",
+        "title": "AI Code Mentor: Analyze Code"
+      },
+      {
+        "command": "aiCodeMentor.openChat",
+        "title": "AI Code Mentor: Open Chat",
+        "icon": "$(comment-discussion)"
+      },
+      {
+        "command": "aiCodeMentor.viewDashboard",
+        "title": "AI Code Mentor: View Dashboard",
+        "icon": "$(dashboard)"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "aiCodeMentor",
+          "title": "AI Code Mentor",
+          "icon": "resources/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "aiCodeMentor": [
+        {
+          "id": "errorList",
+          "name": "Error Analysis",
+          "type": "tree"
+        },
+        {
+          "id": "suggestions",
+          "name": "AI Suggestions",
+          "type": "tree"
+        },
+        {
+          "id": "dashboard",
+          "name": "Activity Dashboard",
+          "type": "webview"
+        },
+        {
+          "id": "chat",
+          "name": "AI Chat Assistant",
+          "type": "webview"
+        }
+      ]
+    },
+    "panels": [
+      {
+        "id": "aiCodeMentor.errorPanel",
+        "title": "AI Code Mentor",
+        "icon": "$(sparkle)"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "aiCodeMentor.explainError",
+          "group": "1_modification",
+          "when": "editorTextFocus"
+        },
+        {
+          "command": "aiCodeMentor.fixCode",
+          "group": "1_modification",
+          "when": "editorTextFocus"
+        },
+        {
+          "command": "aiCodeMentor.analyzeCode",
+          "group": "1_modification",
+          "when": "editorTextFocus"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "aiCodeMentor.openPanel",
+          "when": "editorTextFocus"
+        },
+        {
+          "command": "aiCodeMentor.openChat",
+          "when": "editorTextFocus"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "aiCodeMentor.openPanel",
+        "key": "ctrl+shift+l",
+        "mac": "cmd+shift+l",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "aiCodeMentor.explainError",
+        "key": "ctrl+shift+e",
+        "mac": "cmd+shift+e",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "aiCodeMentor.openChat",
+        "key": "ctrl+shift+a",
+        "mac": "cmd+shift+a"
+      }
+    ],
+    "configuration": {
+      "title": "AI Code Mentor",
+      "properties": {
+        "aiCodeMentor.apiUrl": {
+          "type": "string",
+          "default": "http://localhost:8000",
+          "description": "Backend API URL for AI analysis"
+        },
+        "aiCodeMentor.apiKey": {
+          "type": "string",
+          "description": "API key for authentication (stored securely in VS Code secret storage)"
+        },
+        "aiCodeMentor.enableAutoAnalysis": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically analyze errors as you code"
+        },
+        "aiCodeMentor.enableTerminalAnalysis": {
+          "type": "boolean",
+          "default": true,
+          "description": "Analyze errors from terminal output"
+        },
+        "aiCodeMentor.theme": {
+          "type": "string",
+          "enum": ["dark", "light"],
+          "default": "dark",
+          "description": "Theme for extension UI"
+        },
+        "aiCodeMentor.supportedLanguages": {
+          "type": "array",
+          "default": [
+            "python",
+            "javascript",
+            "typescript",
+            "java",
+            "cpp",
+            "csharp",
+            "php",
+            "ruby",
+            "go",
+            "rust",
+            "swift"
+          ],
+          "description": "Programming languages to analyze"
+        }
+      }
+    },
+    "languages": [
+      {
+        "id": "errorOutput",
+        "aliases": ["Error Output"],
+        "filenamePatterns": ["*.errors"]
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run esbuild-base -- --minify",
+    "esbuild-base": "esbuild ./src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node",
+    "esbuild": "npm run esbuild-base -- --sourcemap",
+    "esbuild-watch": "npm run esbuild-base -- --sourcemap --watch",
+    "build": "npm run esbuild",
+    "watch": "npm run esbuild-watch",
+    "pretest": "npm run esbuild && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js",
+    "dev": "npm run watch"
+  },
+  "devDependencies": {
+    "@types/node": "^18.0.0",
+    "@types/vscode": "^1.85.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "esbuild": "^0.19.0",
+    "eslint": "^8.0.0",
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "axios": "^1.6.0"
+  }
+}
