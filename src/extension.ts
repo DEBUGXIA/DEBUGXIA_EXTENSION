@@ -14,6 +14,7 @@ import { ExtensionConfig } from "./types";
 import { StorageService } from "./services/storageService";
 import { displayBanner, SCANNER_ACTIVE } from "./ascii";
 import { AIAnalysisService } from "./services/aiAnalysisService";
+import { loadEnvFile } from "./envLoader";
 
 let apiClient: ApiClient;
 let errorDetector: ErrorDetector;
@@ -26,6 +27,10 @@ export function activate(context: vscode.ExtensionContext) {
     // Display DEBUGXIA banner
     console.log(displayBanner());
     console.log("🚀 Activating DEBUGXIA Extension...");
+
+    // Load environment variables from .env file
+    console.log("📂 Loading environment configuration...");
+    loadEnvFile(context.extensionPath);
 
     // Initialize storage service
     storageService = new StorageService(context);
@@ -120,7 +125,7 @@ function getExtensionConfig(): ExtensionConfig {
 
   return {
     apiUrl: config.get<string>("apiUrl") || "http://localhost:8000",
-    apiKey: config.get<string>("apiKey") || "",
+    apiKey: config.get<string>("apiKey") || process.env.OPENROUTER_API_KEY || "",
     enableAutoAnalysis: config.get<boolean>("enableAutoAnalysis") ?? true,
     enableTerminalAnalysis: config.get<boolean>("enableTerminalAnalysis") ?? true,
     theme: config.get<"dark" | "light">("theme") || "dark",

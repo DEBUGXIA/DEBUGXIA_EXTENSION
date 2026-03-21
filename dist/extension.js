@@ -8880,11 +8880,11 @@ var require_mime_types = __commonJS({
       }
       return exts[0];
     }
-    function lookup(path2) {
-      if (!path2 || typeof path2 !== "string") {
+    function lookup(path3) {
+      if (!path3 || typeof path3 !== "string") {
         return false;
       }
-      var extension2 = extname2("x." + path2).toLowerCase().substr(1);
+      var extension2 = extname2("x." + path3).toLowerCase().substr(1);
       if (!extension2) {
         return false;
       }
@@ -9989,11 +9989,11 @@ var require_form_data = __commonJS({
     "use strict";
     var CombinedStream = require_combined_stream();
     var util3 = require("util");
-    var path2 = require("path");
+    var path3 = require("path");
     var http3 = require("http");
     var https2 = require("https");
     var parseUrl = require("url").parse;
-    var fs = require("fs");
+    var fs2 = require("fs");
     var Stream = require("stream").Stream;
     var crypto2 = require("crypto");
     var mime = require_mime_types();
@@ -10060,7 +10060,7 @@ var require_form_data = __commonJS({
         if (value.end != void 0 && value.end != Infinity && value.start != void 0) {
           callback(null, value.end + 1 - (value.start ? value.start : 0));
         } else {
-          fs.stat(value.path, function(err, stat) {
+          fs2.stat(value.path, function(err, stat) {
             if (err) {
               callback(err);
               return;
@@ -10117,11 +10117,11 @@ var require_form_data = __commonJS({
     FormData3.prototype._getContentDisposition = function(value, options) {
       var filename;
       if (typeof options.filepath === "string") {
-        filename = path2.normalize(options.filepath).replace(/\\/g, "/");
+        filename = path3.normalize(options.filepath).replace(/\\/g, "/");
       } else if (options.filename || value && (value.name || value.path)) {
-        filename = path2.basename(options.filename || value && (value.name || value.path));
+        filename = path3.basename(options.filename || value && (value.name || value.path));
       } else if (value && value.readable && hasOwn(value, "httpVersion")) {
-        filename = path2.basename(value.client._httpMessage.path || "");
+        filename = path3.basename(value.client._httpMessage.path || "");
       }
       if (filename) {
         return 'filename="' + filename + '"';
@@ -12190,10 +12190,10 @@ function isVisitable(thing) {
 function removeBrackets(key) {
   return utils_default.endsWith(key, "[]") ? key.slice(0, -2) : key;
 }
-function renderKey(path2, key, dots) {
-  if (!path2)
+function renderKey(path3, key, dots) {
+  if (!path3)
     return key;
-  return path2.concat(key).map(function each(token, i) {
+  return path3.concat(key).map(function each(token, i) {
     token = removeBrackets(token);
     return !dots && i ? "[" + token + "]" : token;
   }).join(dots ? "." : "");
@@ -12247,13 +12247,13 @@ function toFormData(obj, formData, options) {
     }
     return value;
   }
-  function defaultVisitor(value, key, path2) {
+  function defaultVisitor(value, key, path3) {
     let arr = value;
     if (utils_default.isReactNative(formData) && utils_default.isReactNativeBlob(value)) {
-      formData.append(renderKey(path2, key, dots), convertValue(value));
+      formData.append(renderKey(path3, key, dots), convertValue(value));
       return false;
     }
-    if (value && !path2 && typeof value === "object") {
+    if (value && !path3 && typeof value === "object") {
       if (utils_default.endsWith(key, "{}")) {
         key = metaTokens ? key : key.slice(0, -2);
         value = JSON.stringify(value);
@@ -12272,7 +12272,7 @@ function toFormData(obj, formData, options) {
     if (isVisitable(value)) {
       return true;
     }
-    formData.append(renderKey(path2, key, dots), convertValue(value));
+    formData.append(renderKey(path3, key, dots), convertValue(value));
     return false;
   }
   const stack = [];
@@ -12281,17 +12281,17 @@ function toFormData(obj, formData, options) {
     convertValue,
     isVisitable
   });
-  function build(value, path2) {
+  function build(value, path3) {
     if (utils_default.isUndefined(value))
       return;
     if (stack.indexOf(value) !== -1) {
-      throw Error("Circular reference detected in " + path2.join("."));
+      throw Error("Circular reference detected in " + path3.join("."));
     }
     stack.push(value);
     utils_default.forEach(value, function each(el, key) {
-      const result = !(utils_default.isUndefined(el) || el === null) && visitor.call(formData, el, utils_default.isString(key) ? key.trim() : key, path2, exposedHelpers);
+      const result = !(utils_default.isUndefined(el) || el === null) && visitor.call(formData, el, utils_default.isString(key) ? key.trim() : key, path3, exposedHelpers);
       if (result === true) {
-        build(el, path2 ? path2.concat(key) : [key]);
+        build(el, path3 ? path3.concat(key) : [key]);
       }
     });
     stack.pop();
@@ -12503,7 +12503,7 @@ var platform_default = {
 // node_modules/axios/lib/helpers/toURLEncodedForm.js
 function toURLEncodedForm(data, options) {
   return toFormData_default(data, new platform_default.classes.URLSearchParams(), {
-    visitor: function(value, key, path2, helpers) {
+    visitor: function(value, key, path3, helpers) {
       if (platform_default.isNode && utils_default.isBuffer(value)) {
         this.append(key, value.toString("base64"));
         return false;
@@ -12533,12 +12533,12 @@ function arrayToObject(arr) {
   return obj;
 }
 function formDataToJSON(formData) {
-  function buildPath(path2, value, target, index) {
-    let name = path2[index++];
+  function buildPath(path3, value, target, index) {
+    let name = path3[index++];
     if (name === "__proto__")
       return true;
     const isNumericKey = Number.isFinite(+name);
-    const isLast = index >= path2.length;
+    const isLast = index >= path3.length;
     name = !name && utils_default.isArray(target) ? target.length : name;
     if (isLast) {
       if (utils_default.hasOwnProp(target, name)) {
@@ -12551,7 +12551,7 @@ function formDataToJSON(formData) {
     if (!target[name] || !utils_default.isObject(target[name])) {
       target[name] = [];
     }
-    const result = buildPath(path2, value, target[name], index);
+    const result = buildPath(path3, value, target[name], index);
     if (result && utils_default.isArray(target[name])) {
       target[name] = arrayToObject(target[name]);
     }
@@ -13937,9 +13937,9 @@ var http_default = isHttpAdapterSupported && function httpAdapter(config) {
       auth = urlUsername + ":" + urlPassword;
     }
     auth && headers.delete("authorization");
-    let path2;
+    let path3;
     try {
-      path2 = buildURL(
+      path3 = buildURL(
         parsed.pathname + parsed.search,
         config.params,
         config.paramsSerializer
@@ -13957,7 +13957,7 @@ var http_default = isHttpAdapterSupported && function httpAdapter(config) {
       false
     );
     const options = {
-      path: path2,
+      path: path3,
       method,
       headers: headers.toJSON(),
       agents: { http: config.httpAgent, https: config.httpsAgent },
@@ -14208,15 +14208,15 @@ var isURLSameOrigin_default = platform_default.hasStandardBrowserEnv ? /* @__PUR
 var cookies_default = platform_default.hasStandardBrowserEnv ? (
   // Standard browser envs support document.cookie
   {
-    write(name, value, expires, path2, domain, secure, sameSite) {
+    write(name, value, expires, path3, domain, secure, sameSite) {
       if (typeof document === "undefined")
         return;
       const cookie = [`${name}=${encodeURIComponent(value)}`];
       if (utils_default.isNumber(expires)) {
         cookie.push(`expires=${new Date(expires).toUTCString()}`);
       }
-      if (utils_default.isString(path2)) {
-        cookie.push(`path=${path2}`);
+      if (utils_default.isString(path3)) {
+        cookie.push(`path=${path3}`);
       }
       if (utils_default.isString(domain)) {
         cookie.push(`domain=${domain}`);
@@ -16752,26 +16752,26 @@ var ChatWebviewProvider = class _ChatWebviewProvider {
       const seenPaths = /* @__PURE__ */ new Set();
       const activeEditor = vscode4.window.activeTextEditor;
       if (activeEditor) {
-        const path2 = activeEditor.document.uri.fsPath;
+        const path3 = activeEditor.document.uri.fsPath;
         const name = activeEditor.document.fileName.split(/[\\/]/).pop() || "Untitled";
-        if (!seenPaths.has(path2)) {
-          availableFiles.push({ path: path2, name });
-          seenPaths.add(path2);
+        if (!seenPaths.has(path3)) {
+          availableFiles.push({ path: path3, name });
+          seenPaths.add(path3);
         }
       }
       vscode4.window.visibleTextEditors.forEach((editor) => {
-        const path2 = editor.document.uri.fsPath;
+        const path3 = editor.document.uri.fsPath;
         const name = editor.document.fileName.split(/[\\/]/).pop() || "Untitled";
-        if (!seenPaths.has(path2) && editor.document.languageId !== "plaintext") {
-          availableFiles.push({ path: path2, name });
-          seenPaths.add(path2);
+        if (!seenPaths.has(path3) && editor.document.languageId !== "plaintext") {
+          availableFiles.push({ path: path3, name });
+          seenPaths.add(path3);
         }
       });
       for (const cachedFile of this.errorFileCache.values()) {
-        const path2 = cachedFile.context.filePath;
-        if (!seenPaths.has(path2)) {
-          availableFiles.push({ path: path2, name: cachedFile.context.fileName });
-          seenPaths.add(path2);
+        const path3 = cachedFile.context.filePath;
+        if (!seenPaths.has(path3)) {
+          availableFiles.push({ path: path3, name: cachedFile.context.fileName });
+          seenPaths.add(path3);
         }
       }
       console.log(`\u26A1 [FAST MODE] Found ${availableFiles.length} available files to analyze`);
@@ -18386,6 +18386,40 @@ function displayBanner() {
 ${SCANNER_STARTING}`;
 }
 
+// src/envLoader.ts
+var fs = __toESM(require("fs"));
+var path2 = __toESM(require("path"));
+function loadEnvFile(extensionPath) {
+  try {
+    const envPath = path2.join(extensionPath, ".env");
+    if (!fs.existsSync(envPath)) {
+      console.log("\u26A0\uFE0F  .env file not found at:", envPath);
+      return;
+    }
+    const envContent = fs.readFileSync(envPath, "utf8");
+    const lines = envContent.split("\n");
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith("#")) {
+        continue;
+      }
+      const match = trimmed.match(/^([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/);
+      if (match) {
+        const key = match[1];
+        const value = match[2].trim().replace(/^["']|["']$/g, "");
+        process.env[key] = value;
+        if (key === "OPENROUTER_API_KEY") {
+          console.log(`\u2705 Loaded environment variable: ${key} = ${value.substring(0, 20)}...`);
+        } else {
+          console.log(`\u2705 Loaded environment variable: ${key}`);
+        }
+      }
+    }
+  } catch (error) {
+    console.error("\u274C Error loading .env file:", error);
+  }
+}
+
 // src/extension.ts
 var apiClient;
 var errorDetector;
@@ -18396,6 +18430,8 @@ function activate(context) {
   try {
     console.log(displayBanner());
     console.log("\u{1F680} Activating DEBUGXIA Extension...");
+    console.log("\u{1F4C2} Loading environment configuration...");
+    loadEnvFile(context.extensionPath);
     storageService = new StorageService(context);
     console.log("\u2705 Storage Service initialized");
     const config = getExtensionConfig();
@@ -18463,7 +18499,7 @@ function getExtensionConfig() {
   const config = vscode6.workspace.getConfiguration("aiCodeMentor");
   return {
     apiUrl: config.get("apiUrl") || "http://localhost:8000",
-    apiKey: config.get("apiKey") || "",
+    apiKey: config.get("apiKey") || process.env.OPENROUTER_API_KEY || "",
     enableAutoAnalysis: config.get("enableAutoAnalysis") ?? true,
     enableTerminalAnalysis: config.get("enableTerminalAnalysis") ?? true,
     theme: config.get("theme") || "dark",
