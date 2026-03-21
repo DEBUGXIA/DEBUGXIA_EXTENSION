@@ -15995,7 +15995,7 @@ var ChatWebviewProvider = class _ChatWebviewProvider {
       <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>AI Chat Assistant</title>
+        <title>AI Code Mentor - Smart Assistant</title>
         <style>
           * { 
             margin: 0; 
@@ -16004,47 +16004,70 @@ var ChatWebviewProvider = class _ChatWebviewProvider {
           }
 
           body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto;
-            background: linear-gradient(135deg, #1e1e1e 0%, #2d2d2d 100%);
+            font-family: 'Segoe UI', Roboto, -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%);
             color: #e0e0e0;
             display: flex;
             flex-direction: column;
             height: 100vh;
             padding: 0;
+            overflow: hidden;
           }
 
           .header {
-            padding: 16px;
-            border-bottom: 1px solid rgba(0, 212, 255, 0.2);
-            background: rgba(0, 0, 0, 0.3);
+            padding: 16px 20px;
+            border-bottom: 1px solid rgba(0, 212, 255, 0.15);
+            background: linear-gradient(135deg, rgba(0, 0, 0, 0.4) 0%, rgba(0, 212, 255, 0.05) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+          }
+
+          .header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
           }
 
           .header h2 {
             color: #00d4ff;
+            font-size: 16px;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+          }
+
+          .header-badge {
             display: flex;
             align-items: center;
-            gap: 8px;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            background: rgba(0, 212, 255, 0.15);
+            border: 1px solid rgba(0, 212, 255, 0.3);
+            font-size: 14px;
           }
 
           .messages {
             flex: 1;
             overflow-y: auto;
-            padding: 16px;
+            padding: 20px;
             display: flex;
             flex-direction: column;
-            gap: 12px;
+            gap: 16px;
           }
 
-          .message {
+          .message-group {
             display: flex;
-            gap: 8px;
-            animation: slideIn 0.3s ease-out;
+            gap: 12px;
+            align-items: flex-start;
+            animation: fadeIn 0.4s ease-out;
           }
 
-          @keyframes slideIn {
+          @keyframes fadeIn {
             from {
               opacity: 0;
-              transform: translateY(10px);
+              transform: translateY(8px);
             }
             to {
               opacity: 1;
@@ -16052,97 +16075,99 @@ var ChatWebviewProvider = class _ChatWebviewProvider {
             }
           }
 
-          .message.user {
+          .message-group.user {
             justify-content: flex-end;
           }
 
-          .message.ai {
+          .message-group.ai {
             justify-content: flex-start;
           }
 
-          .message-content {
-            max-width: 80%;
-            padding: 12px 14px;
-            border-radius: 8px;
-            word-wrap: break-word;
-            line-height: 1.4;
-          }
-
-          .message.user .message-content {
-            background: linear-gradient(135deg, #00d4ff 0%, #0066cc 100%);
-            color: #000;
-            font-weight: 500;
-          }
-
-          .message.ai .message-content {
-            background: rgba(0, 212, 255, 0.1);
-            border: 1px solid rgba(0, 212, 255, 0.3);
-            color: #e0e0e0;
-          }
-
-          .message.ai .icon {
-            color: #00d4ff;
-            font-size: 20px;
-          }
-
-          .input-area {
-            padding: 16px;
-            border-top: 1px solid rgba(0, 212, 255, 0.2);
-            background: rgba(0, 0, 0, 0.3);
-            display: flex;
-            gap: 8px;
-          }
-
-          input {
-            flex: 1;
-            padding: 10px 14px;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(0, 212, 255, 0.3);
+          .avatar {
+            width: 32px;
+            height: 32px;
             border-radius: 6px;
-            color: #e0e0e0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            flex-shrink: 0;
+          }
+
+          .avatar.ai {
+            background: rgba(0, 212, 255, 0.15);
+            border: 1px solid rgba(0, 212, 255, 0.3);
+          }
+
+          .avatar.user {
+            background: rgba(0, 150, 200, 0.2);
+            border: 1px solid rgba(0, 212, 255, 0.2);
+          }
+
+          .message-content {
+            max-width: 75%;
+            padding: 12px 16px;
+            border-radius: 10px;
+            word-wrap: break-word;
+            line-height: 1.5;
             font-size: 14px;
           }
 
-          input:focus {
-            outline: none;
-            border-color: #00d4ff;
-            background: rgba(0, 212, 255, 0.05);
+          .message-group.user .message-content {
+            background: linear-gradient(135deg, #00a8cc 0%, #0066cc 100%);
+            color: #fff;
+            border: 1px solid rgba(0, 212, 255, 0.4);
+            border-bottom-right-radius: 4px;
           }
 
-          button {
-            padding: 10px 16px;
-            background: linear-gradient(135deg, #00d4ff 0%, #0066cc 100%);
-            border: none;
+          .message-group.ai .message-content {
+            background: rgba(0, 212, 255, 0.08);
+            border: 1px solid rgba(0, 212, 255, 0.25);
+            color: #e0e0e0;
+            border-bottom-left-radius: 4px;
+          }
+
+          .message-content code {
+            background: rgba(255, 255, 255, 0.08);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            color: #ce9178;
+            font-size: 13px;
+          }
+
+          .message-content pre {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 10px;
             border-radius: 6px;
-            color: #000;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
+            overflow-x: auto;
+            margin: 8px 0;
+            border-left: 3px solid #00d4ff;
           }
 
-          button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0, 212, 255, 0.4);
-          }
-
-          button:active {
-            transform: translateY(0);
+          .message-content pre code {
+            background: transparent;
+            padding: 0;
+            color: #ce9178;
           }
 
           .loading {
             display: flex;
             align-items: center;
-            gap: 4px;
-            color: #00d4ff;
+            gap: 6px;
           }
 
           .loading span {
             display: inline-block;
-            width: 8px;
-            height: 8px;
+            width: 6px;
+            height: 6px;
             border-radius: 50%;
             background: #00d4ff;
-            animation: pulse 1.5s ease-in-out infinite;
+            animation: bounce 1.4s infinite;
+          }
+
+          .loading span:nth-child(1) {
+            animation-delay: 0s;
           }
 
           .loading span:nth-child(2) {
@@ -16153,13 +16178,90 @@ var ChatWebviewProvider = class _ChatWebviewProvider {
             animation-delay: 0.4s;
           }
 
-          @keyframes pulse {
-            0%, 100% { opacity: 0.3; }
-            50% { opacity: 1; }
+          @keyframes bounce {
+            0%, 80%, 100% {
+              transform: scale(1);
+              opacity: 0.5;
+            }
+            40% {
+              transform: scale(1.2);
+              opacity: 1;
+            }
+          }
+
+          .input-area {
+            padding: 16px 20px;
+            border-top: 1px solid rgba(0, 212, 255, 0.15);
+            background: rgba(0, 0, 0, 0.3);
+            display: flex;
+            gap: 10px;
+            align-items: center;
+          }
+
+          .input-wrapper {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(0, 212, 255, 0.25);
+            border-radius: 8px;
+            padding: 2px;
+            transition: all 0.3s ease;
+          }
+
+          .input-wrapper:focus-within {
+            border-color: #00d4ff;
+            background: rgba(0, 212, 255, 0.08);
+            box-shadow: 0 0 12px rgba(0, 212, 255, 0.15);
+          }
+
+          input {
+            flex: 1;
+            padding: 12px 14px;
+            background: transparent;
+            border: none;
+            color: #e0e0e0;
+            font-size: 14px;
+            outline: none;
+            font-family: inherit;
+          }
+
+          input::placeholder {
+            color: rgba(224, 224, 224, 0.4);
+          }
+
+          button {
+            padding: 10px 18px;
+            background: linear-gradient(135deg, #00d4ff 0%, #0088cc 100%);
+            border: none;
+            border-radius: 6px;
+            color: #000;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+          }
+
+          button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0, 212, 255, 0.3);
+          }
+
+          button:active {
+            transform: translateY(0);
+          }
+
+          button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
           }
 
           ::-webkit-scrollbar {
-            width: 6px;
+            width: 8px;
           }
 
           ::-webkit-scrollbar-track {
@@ -16167,55 +16269,89 @@ var ChatWebviewProvider = class _ChatWebviewProvider {
           }
 
           ::-webkit-scrollbar-thumb {
-            background: rgba(0, 212, 255, 0.3);
-            border-radius: 3px;
+            background: rgba(0, 212, 255, 0.25);
+            border-radius: 4px;
           }
 
           ::-webkit-scrollbar-thumb:hover {
-            background: rgba(0, 212, 255, 0.6);
+            background: rgba(0, 212, 255, 0.4);
+          }
+
+          .timestamp {
+            font-size: 11px;
+            color: rgba(224, 224, 224, 0.4);
+            margin-top: 4px;
+          }
+
+          @media (max-width: 600px) {
+            .message-content {
+              max-width: 85%;
+            }
           }
         </style>
       </head>
       <body>
         <div class="header">
-          <h2>\u{1F4AC} AI Chat Assistant</h2>
+          <div class="header-left">
+            <div class="header-badge">\u{1F916}</div>
+            <h2>AI Code Mentor</h2>
+          </div>
         </div>
 
         <div class="messages" id="messages">
-          <div class="message ai">
-            <span class="icon">\u{1F916}</span>
-            <div class="message-content">
-              Hi! I'm your AI Code Mentor. Ask me anything about your code - bugs, optimizations, or improvements!
+          <div class="message-group ai">
+            <div class="avatar ai">\u{1F916}</div>
+            <div>
+              <div class="message-content">
+                Hi! \u{1F44B} I'm your AI Code Mentor. Ask me anything about your code\u2014<strong>bugs</strong>, <strong>errors</strong>, <strong>optimizations</strong>, or <strong>best practices</strong>. I'm here to help you write better code!
+              </div>
+              <div class="timestamp">just now</div>
             </div>
           </div>
         </div>
 
         <div class="input-area">
-          <input 
-            type="text" 
-            id="input" 
-            placeholder="Ask me anything about your code..."
-            autocomplete="off"
-          />
-          <button onclick="sendMessage()">Send</button>
+          <div class="input-wrapper">
+            <input 
+              type="text" 
+              id="input" 
+              placeholder="Tell your all query....."
+              autocomplete="off"
+            />
+          </div>
+          <button id="sendBtn" onclick="sendMessage()">
+            <span>\u2192</span>
+          </button>
         </div>
 
         <script>
           const vscode = acquireVsCodeApi();
           const input = document.getElementById('input');
           const messages = document.getElementById('messages');
+          const sendBtn = document.getElementById('sendBtn');
 
           input.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') sendMessage();
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              sendMessage();
+            }
           });
+
+          function formatTime() {
+            const now = new Date();
+            return now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          }
 
           function sendMessage() {
             const text = input.value.trim();
             if (!text) return;
 
+            sendBtn.disabled = true;
+
             // Add user message
             addMessage(text, 'user');
             input.value = '';
+            input.focus();
 
             // Send to extension
             vscode.postMessage({
@@ -16229,27 +16365,45 @@ var ChatWebviewProvider = class _ChatWebviewProvider {
           }
 
           function addMessage(text, type) {
-            const messageDiv = document.createElement('div');
-            messageDiv.className = 'message ' + type.replace('-loading', '');
+            const messageGroup = document.createElement('div');
+            messageGroup.className = 'message-group ' + type.replace('-loading', '');
 
             if (type === 'ai-loading') {
-              messageDiv.innerHTML = '<span class="icon">\u{1F916}</span><div class="message-content"><div class="loading"><span></span><span></span><span></span></div></div>';
+              messageGroup.innerHTML = '<div class="avatar ai">\u{1F916}</div><div><div class="message-content"><div class="loading"><span></span><span></span><span></span></div></div></div>';
             } else {
+              const avatar = document.createElement('div');
+              avatar.className = 'avatar ' + type;
+              avatar.textContent = type === 'user' ? '\u{1F464}' : '\u{1F916}';
+
               const contentDiv = document.createElement('div');
-              contentDiv.className = 'message-content';
-              contentDiv.textContent = text;
-              messageDiv.appendChild(contentDiv);
+              const textDiv = document.createElement('div');
+              textDiv.className = 'message-content';
+              textDiv.innerHTML = text
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/
+/g, '<br>');
+
+              const timeDiv = document.createElement('div');
+              timeDiv.className = 'timestamp';
+              timeDiv.textContent = formatTime();
+
+              contentDiv.appendChild(textDiv);
+              contentDiv.appendChild(timeDiv);
+              messageGroup.appendChild(avatar);
+              messageGroup.appendChild(contentDiv);
             }
 
-            messages.appendChild(messageDiv);
+            messages.appendChild(messageGroup);
             messages.scrollTop = messages.scrollHeight;
 
-            return messageDiv;
+            return messageGroup;
           }
 
           window.addEventListener('message', (event) => {
             const message = event.data;
             if (message.command === 'chatResponse') {
+              sendBtn.disabled = false;
               // Remove loading message
               const loading = messages.querySelector('.ai-loading');
               if (loading) loading.remove();
@@ -16760,47 +16914,70 @@ var errorDetector;
 var storageService;
 var scannerTerminal;
 function activate(context) {
-  console.log(displayBanner());
-  storageService = new StorageService(context);
-  const config = getExtensionConfig();
-  if (!config.apiUrl || !config.apiKey) {
-    vscode5.window.showWarningMessage(
-      "AI Code Mentor: Please configure API settings in preferences."
-    );
-  }
-  apiClient = new ApiClient(config.apiUrl, config.apiKey);
-  errorDetector = new ErrorDetector();
-  const errorListProvider = new ErrorListProvider(errorDetector);
-  vscode5.window.registerTreeDataProvider("errorList", errorListProvider);
-  const chatProvider = new ChatWebviewProvider(
-    context.extensionUri,
-    apiClient,
-    storageService
-  );
-  context.subscriptions.push(
-    vscode5.window.registerWebviewPanelSerializer("aiCodeMentor.chat", chatProvider)
-  );
-  const dashboardProvider = new DashboardWebviewProvider(
-    context.extensionUri,
-    apiClient,
-    storageService
-  );
-  context.subscriptions.push(
-    vscode5.window.registerWebviewPanelSerializer(
-      "aiCodeMentor.dashboard",
-      dashboardProvider
-    )
-  );
-  registerCommands(context, apiClient, errorDetector, errorListProvider);
-  watchEditorAndTerminal(context);
-  initializeScannerTerminal(context);
-  const configListener = vscode5.workspace.onDidChangeConfiguration((e) => {
-    if (e.affectsConfiguration("aiCodeMentor")) {
-      const newConfig = getExtensionConfig();
-      apiClient.setConfig(newConfig.apiUrl, newConfig.apiKey);
+  try {
+    console.log(displayBanner());
+    console.log("\u{1F680} Activating AI Smart Code Mentor Extension...");
+    storageService = new StorageService(context);
+    console.log("\u2705 Storage Service initialized");
+    const config = getExtensionConfig();
+    console.log("\u{1F4CB} Configuration loaded:", {
+      apiUrl: config.apiUrl,
+      apiKey: config.apiKey ? "***configured***" : "\u26A0\uFE0F NOT SET",
+      enableAutoAnalysis: config.enableAutoAnalysis,
+      enableTerminalAnalysis: config.enableTerminalAnalysis
+    });
+    if (!config.apiUrl || !config.apiKey) {
+      vscode5.window.showWarningMessage(
+        "AI Code Mentor: API settings not configured. Some features may be limited. Check VS Code Settings > AI Code Mentor."
+      );
+      console.warn("\u26A0\uFE0F  API Configuration missing - some features will be disabled");
     }
-  });
-  context.subscriptions.push(configListener);
+    apiClient = new ApiClient(config.apiUrl || "http://localhost:8000", config.apiKey || "");
+    errorDetector = new ErrorDetector();
+    console.log("\u2705 API Client and Error Detector initialized");
+    const errorListProvider = new ErrorListProvider(errorDetector);
+    vscode5.window.registerTreeDataProvider("errorList", errorListProvider);
+    console.log("\u2705 Error List Provider registered");
+    const chatProvider = new ChatWebviewProvider(
+      context.extensionUri,
+      apiClient,
+      storageService
+    );
+    context.subscriptions.push(
+      vscode5.window.registerWebviewPanelSerializer("aiCodeMentor.chat", chatProvider)
+    );
+    console.log("\u2705 Chat Webview Provider registered");
+    const dashboardProvider = new DashboardWebviewProvider(
+      context.extensionUri,
+      apiClient,
+      storageService
+    );
+    context.subscriptions.push(
+      vscode5.window.registerWebviewPanelSerializer(
+        "aiCodeMentor.dashboard",
+        dashboardProvider
+      )
+    );
+    console.log("\u2705 Dashboard Webview Provider registered");
+    registerCommands(context, apiClient, errorDetector, errorListProvider);
+    console.log("\u2705 Commands registered");
+    watchEditorAndTerminal(context);
+    console.log("\u2705 Editor and Terminal watcher initialized");
+    initializeScannerTerminal(context);
+    const configListener = vscode5.workspace.onDidChangeConfiguration((e) => {
+      if (e.affectsConfiguration("aiCodeMentor")) {
+        const newConfig = getExtensionConfig();
+        apiClient.setConfig(newConfig.apiUrl || "http://localhost:8000", newConfig.apiKey || "");
+        console.log("\u{1F504} Configuration reloaded");
+      }
+    });
+    context.subscriptions.push(configListener);
+    console.log("\u2728 AI Smart Code Mentor Extension fully activated!");
+    vscode5.window.showInformationMessage("\u{1F680} AI Smart Code Mentor is ready! Use Ctrl+Shift+L to open the panel.");
+  } catch (error) {
+    console.error("\u274C Failed to activate extension:", error);
+    vscode5.window.showErrorMessage(`Extension activation failed: ${error}`);
+  }
 }
 function getExtensionConfig() {
   const config = vscode5.workspace.getConfiguration("aiCodeMentor");

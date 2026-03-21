@@ -4,7 +4,6 @@
  */
 
 import * as vscode from "vscode";
-import { v4 as uuidv4 } from "crypto";
 
 export class StorageService {
   private context: vscode.ExtensionContext;

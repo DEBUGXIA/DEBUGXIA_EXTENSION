@@ -20,67 +20,93 @@ let storageService: StorageService;
 let scannerTerminal: vscode.Terminal | undefined;
 
 export function activate(context: vscode.ExtensionContext) {
-  // Display DEBUGXIA banner
-  console.log(displayBanner());
+  try {
+    // Display DEBUGXIA banner
+    console.log(displayBanner());
+    console.log("🚀 Activating AI Smart Code Mentor Extension...");
 
-  // Initialize storage service
-  storageService = new StorageService(context);
+    // Initialize storage service
+    storageService = new StorageService(context);
+    console.log("✅ Storage Service initialized");
 
-  // Get configuration
-  const config = getExtensionConfig();
-  if (!config.apiUrl || !config.apiKey) {
-    vscode.window.showWarningMessage(
-      'AI Code Mentor: Please configure API settings in preferences.'
-    );
-  }
+    // Get configuration
+    const config = getExtensionConfig();
+    console.log("📋 Configuration loaded:", { 
+      apiUrl: config.apiUrl, 
+      apiKey: config.apiKey ? "***configured***" : "⚠️ NOT SET",
+      enableAutoAnalysis: config.enableAutoAnalysis,
+      enableTerminalAnalysis: config.enableTerminalAnalysis 
+    });
 
-  // Initialize services
-  apiClient = new ApiClient(config.apiUrl, config.apiKey);
-  errorDetector = new ErrorDetector();
-
-  // Register UI providers
-  const errorListProvider = new ErrorListProvider(errorDetector);
-  vscode.window.registerTreeDataProvider("errorList", errorListProvider);
-
-  const chatProvider = new ChatWebviewProvider(
-    context.extensionUri,
-    apiClient,
-    storageService
-  );
-  context.subscriptions.push(
-    vscode.window.registerWebviewPanelSerializer("aiCodeMentor.chat", chatProvider)
-  );
-
-  const dashboardProvider = new DashboardWebviewProvider(
-    context.extensionUri,
-    apiClient,
-    storageService
-  );
-  context.subscriptions.push(
-    vscode.window.registerWebviewPanelSerializer(
-      "aiCodeMentor.dashboard",
-      dashboardProvider
-    )
-  );
-
-  // Register commands
-  registerCommands(context, apiClient, errorDetector, errorListProvider);
-
-  // Watch active editor and terminal
-  watchEditorAndTerminal(context);
-
-  // Open scanner terminal
-  initializeScannerTerminal(context);
-
-  // Listen to configuration changes
-  const configListener = vscode.workspace.onDidChangeConfiguration((e) => {
-    if (e.affectsConfiguration("aiCodeMentor")) {
-      const newConfig = getExtensionConfig();
-      apiClient.setConfig(newConfig.apiUrl, newConfig.apiKey);
+    if (!config.apiUrl || !config.apiKey) {
+      vscode.window.showWarningMessage(
+        'AI Code Mentor: API settings not configured. Some features may be limited. Check VS Code Settings > AI Code Mentor.'
+      );
+      console.warn("⚠️  API Configuration missing - some features will be disabled");
     }
-  });
 
-  context.subscriptions.push(configListener);
+    // Initialize services
+    apiClient = new ApiClient(config.apiUrl || "http://localhost:8000", config.apiKey || "");
+    errorDetector = new ErrorDetector();
+    console.log("✅ API Client and Error Detector initialized");
+
+    // Register UI providers
+    const errorListProvider = new ErrorListProvider(errorDetector);
+    vscode.window.registerTreeDataProvider("errorList", errorListProvider);
+    console.log("✅ Error List Provider registered");
+
+    const chatProvider = new ChatWebviewProvider(
+      context.extensionUri,
+      apiClient,
+      storageService
+    );
+    context.subscriptions.push(
+      vscode.window.registerWebviewPanelSerializer("aiCodeMentor.chat", chatProvider)
+    );
+    console.log("✅ Chat Webview Provider registered");
+
+    const dashboardProvider = new DashboardWebviewProvider(
+      context.extensionUri,
+      apiClient,
+      storageService
+    );
+    context.subscriptions.push(
+      vscode.window.registerWebviewPanelSerializer(
+        "aiCodeMentor.dashboard",
+        dashboardProvider
+      )
+    );
+    console.log("✅ Dashboard Webview Provider registered");
+
+    // Register commands
+    registerCommands(context, apiClient, errorDetector, errorListProvider);
+    console.log("✅ Commands registered");
+
+    // Watch active editor and terminal
+    watchEditorAndTerminal(context);
+    console.log("✅ Editor and Terminal watcher initialized");
+
+    // Open scanner terminal
+    initializeScannerTerminal(context);
+
+    // Listen to configuration changes
+    const configListener = vscode.workspace.onDidChangeConfiguration((e) => {
+      if (e.affectsConfiguration("aiCodeMentor")) {
+        const newConfig = getExtensionConfig();
+        apiClient.setConfig(newConfig.apiUrl || "http://localhost:8000", newConfig.apiKey || "");
+        console.log("🔄 Configuration reloaded");
+      }
+    });
+
+    context.subscriptions.push(configListener);
+    
+    console.log("✨ AI Smart Code Mentor Extension fully activated!");
+    vscode.window.showInformationMessage("🚀 AI Smart Code Mentor is ready! Use Ctrl+Shift+L to open the panel.");
+    
+  } catch (error) {
+    console.error("❌ Failed to activate extension:", error);
+    vscode.window.showErrorMessage(`Extension activation failed: ${error}`);
+  }
 }
 
 /**
@@ -119,19 +145,21 @@ function registerCommands(
   errorDetector: ErrorDetector,
   errorListProvider: ErrorListProvider
 ) {
-  // Open AI Code Mentor Panel
-  const openPanelCmd = vscode.commands.registerCommand(
-    "aiCodeMentor.openPanel",
-    async () => {
-      const editor = vscode.window.activeTextEditor;
-      if (!editor) {
-        vscode.window.showErrorMessage("No active editor");
-        return;
-      }
+  try {
+    // Open AI Code Mentor Panel
+    const openPanelCmd = vscode.commands.registerCommand(
+      "aiCodeMentor.openPanel",
+      async () => {
+        try {
+          const editor = vscode.window.activeTextEditor;
+          if (!editor) {
+            vscode.window.showErrorMessage("No active editor");
+            return;
+          }
 
-      const errors = await errorDetector.analyzeDocument(editor.document);
-      if (errors.length === 0) {
-        vscode.window.showInformationMessage("No errors found in this file!");
+          const errors = await errorDetector.analyzeDocument(editor.document);
+          if (errors.length === 0) {
+            vscode.window.showInformationMessage("No errors found in this file!");
         return;
       }
 
@@ -269,7 +297,18 @@ function registerCommands(
   const openChatCmd = vscode.commands.registerCommand(
     "aiCodeMentor.openChat",
     () => {
-      ChatWebviewProvider.show(context.extensionUri, apiClient, storageService);
+      try {
+        console.log("🔷 Opening Chat Panel...");
+        console.log("Context URI:", context.extensionUri);
+        console.log("API Client:", apiClient ? "✅ ready" : "❌ not ready");
+        console.log("Storage Service:", storageService ? "✅ ready" : "❌ not ready");
+        
+        ChatWebviewProvider.show(context.extensionUri, apiClient, storageService);
+        console.log("✅ Chat Panel opened successfully");
+      } catch (error) {
+        console.error("❌ Error opening chat:", error);
+        vscode.window.showErrorMessage(`Failed to open chat: ${error}`);
+      }
     }
   );
 
@@ -289,6 +328,10 @@ function registerCommands(
     openChatCmd,
     viewDashboardCmd
   );
+  } catch (error) {
+    console.error("❌ Error registering commands:", error);
+    vscode.window.showErrorMessage(`Failed to register commands: ${error}`);
+  }
 }
 
 /**
