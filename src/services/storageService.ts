@@ -101,4 +101,11 @@ export class StorageService {
   async clearErrorHistory(): Promise<void> {
     await this.saveSetting("errorHistory", []);
   }
+
+  /**
+   * Clear analysis history
+   */
+  async clearAnalysisHistory(): Promise<void> {
+    await this.saveSetting("analysisHistory", []);
+  }
 }

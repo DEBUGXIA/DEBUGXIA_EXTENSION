@@ -54,7 +54,7 @@ export function activate(context: vscode.ExtensionContext) {
 
     // Initialize services
     apiClient = new ApiClient(config.apiUrl || "http://localhost:8000", config.apiKey || "");
-    aiAnalysisService = new AIAnalysisService();
+    aiAnalysisService = new AIAnalysisService(config.apiKey || "");
     errorDetector = new ErrorDetector();
     console.log("✅ API Client, AI Analysis Service, and Error Detector initialized");
 
@@ -91,11 +91,13 @@ export function activate(context: vscode.ExtensionContext) {
     console.log("✅ Commands registered");
 
     // Watch active editor and terminal
-    watchEditorAndTerminal(context);
-    console.log("✅ Editor and Terminal watcher initialized");
+    // DISABLED: watchEditorAndTerminal causes crashes, focus on dashboard only
+    // watchEditorAndTerminal(context);
+    // console.log("✅ Editor and Terminal watcher initialized");
 
     // Open scanner terminal
-    initializeScannerTerminal(context);
+    // DISABLED: Scanner terminal causes issues
+    // initializeScannerTerminal(context);
 
     // Listen to configuration changes
     const configListener = vscode.workspace.onDidChangeConfiguration((e) => {
@@ -154,217 +156,116 @@ function registerCommands(
   errorListProvider: ErrorListProvider
 ) {
   try {
-    // Open DEBUGXIA Analysis Panel
-    const openPanelCmd = vscode.commands.registerCommand(
-      "aiCodeMentor.openPanel",
-      async () => {
+    console.log('📋 Registering essential commands...');
+
+    // Open Chat / Dashboard
+    const openChatCmd = vscode.commands.registerCommand(
+      "aiCodeMentor.openChat",
+      () => {
         try {
-          const editor = vscode.window.activeTextEditor;
-          if (!editor) {
-            vscode.window.showErrorMessage("No active editor");
-            return;
-          }
-
-          const errors = await errorDetector.analyzeDocument(editor.document);
-          if (errors.length === 0) {
-            vscode.window.showInformationMessage("No errors found in this file!");
-            return;
-          }
-
-          // Show errors in Quick Pick
-          const selected = await vscode.window.showQuickPick(
-            errors.map((e) => `Line ${e.line}: ${e.errorType} - ${e.errorMessage}`),
-            { placeHolder: "Select an error to analyze..." }
-          );
-
-          if (selected) {
-            vscode.commands.executeCommand("aiCodeMentor.explainError");
-          }
+          console.log("🎨 Opening Dashboard...");
+          DashboardWebviewProvider.show(context.extensionUri, apiClient, storageService);
         } catch (error) {
-          console.error("Error in openPanelCmd:", error);
+          console.error("❌ Error opening dashboard:", error);
+          vscode.window.showErrorMessage(`Failed to open dashboard: ${error}`);
+        }
+      }
+    );
+
+    // View Dashboard
+    const viewDashboardCmd = vscode.commands.registerCommand(
+      "aiCodeMentor.viewDashboard",
+      () => {
+        console.log("📊 Viewing Dashboard...");
+        DashboardWebviewProvider.show(context.extensionUri, apiClient, storageService);
+      }
+    );
+
+    // Analyze File Command
+    const analyzeFileCmd = vscode.commands.registerCommand(
+      "debugxia.analyzeFile",
+      async (filePath?: string) => {
+        try {
+          console.log('📝 analyzeFileCmd triggered with filePath:', filePath);
+          
+          if (!filePath) {
+            const editor = vscode.window.activeTextEditor;
+            if (!editor) {
+              vscode.window.showErrorMessage("No active editor");
+              return;
+            }
+            filePath = editor.document.fileName;
+          }
+
+          console.log("🔍 Analyzing file:", filePath);
+          vscode.window.showInformationMessage(`Analyzing ${path.basename(filePath)}... ⚡`);
+
+          // Read file content
+          const uri = vscode.Uri.file(filePath);
+          const fileContent = await vscode.workspace.fs.readFile(uri);
+          const text = new TextDecoder().decode(fileContent);
+
+          // Get file info
+          const fileName = path.basename(filePath);
+          const language = path.extname(filePath).slice(1) || "text";
+          const lines = text.split('\n').length;
+
+          // Simple analysis: count functions and classes
+          const functionCount = (text.match(/^(def|function|async function|class |interface |struct )/gm) || []).length;
+          const classCount = (text.match(/^class /gm) || []).length;
+
+          // Get AI analysis
+          console.log("🤖 Getting AI analysis...");
+          const aiAnalysis = await aiAnalysisService.analyzeCode(text, language, fileName);
+          console.log("✅ AI analysis complete:", {
+            errorScore: aiAnalysis.errorScore,
+            codeQualityScore: aiAnalysis.codeQualityScore,
+            optimizationScore: aiAnalysis.optimizationScore,
+          });
+
+          // Store complete analysis with AI results
+          const analysisData = {
+            fileName: filePath,
+            displayName: fileName,
+            language,
+            lines,
+            functions: functionCount,
+            classes: classCount,
+            // AI Analysis Results
+            errorScore: aiAnalysis.errorScore,
+            codeQualityScore: aiAnalysis.codeQualityScore,
+            optimizationScore: aiAnalysis.optimizationScore,
+            summary: aiAnalysis.summary,
+            issues: aiAnalysis.issues,
+            suggestions: aiAnalysis.suggestions,
+            timestamp: Date.now(),
+          };
+
+          console.log("💾 Saving analysis");
+          await storageService.saveAnalysis(analysisData);
+          console.log("✅ Analysis saved");
+
+          // Show dashboard and refresh it with new data
+          console.log("🎨 Opening dashboard...");
+          DashboardWebviewProvider.show(context.extensionUri, apiClient, storageService);
+          
+          // Wait a moment for the panel to be ready, then update it
+          await new Promise(r => setTimeout(r, 500));
+          DashboardWebviewProvider.updatePanel();
+          
+          vscode.window.showInformationMessage(`✅ Analysis complete for ${fileName}`);
+          console.log("✅ Analyze complete");
+
+        } catch (error) {
+          console.error("❌ Error analyzing file:", error);
           vscode.window.showErrorMessage(`Error: ${error}`);
         }
       }
     );
 
-  // Explain Error
-  const explainErrorCmd = vscode.commands.registerCommand(
-    "aiCodeMentor.explainError",
-    async () => {
-      const editor = vscode.window.activeTextEditor;
-      if (!editor) {
-        vscode.window.showErrorMessage("No active editor");
-        return;
-      }
+    context.subscriptions.push(openChatCmd, viewDashboardCmd, analyzeFileCmd);
+    console.log('✅ Essential commands registered');
 
-      const position = editor.selection.active;
-      const line = editor.document.lineAt(position.line);
-
-      vscode.window.showInformationMessage("Analyzing error... ⚡");
-
-      try {
-        const userId = storageService.getUserId();
-        const explanation = await apiClient.analyzeError({
-          code: line.text,
-          language: editor.document.languageId,
-          errorType: "syntax",
-          errorMessage: line.text,
-          userId,
-        });
-
-        if (explanation) {
-          showExplanationPanel(explanation);
-        } else {
-          vscode.window.showErrorMessage("Could not analyze error");
-        }
-      } catch (error) {
-        vscode.window.showErrorMessage(`Error: ${error}`);
-      }
-    }
-  );
-
-  // Fix Code with AI
-  const fixCodeCmd = vscode.commands.registerCommand(
-    "aiCodeMentor.fixCode",
-    async () => {
-      const editor = vscode.window.activeTextEditor;
-      if (!editor) {
-        vscode.window.showErrorMessage("No active editor");
-        return;
-      }
-
-      const selection = editor.selection;
-      const selectedText = editor.document.getText(selection);
-
-      if (!selectedText) {
-        vscode.window.showErrorMessage("Please select code to fix");
-        return;
-      }
-
-      vscode.window.showInformationMessage("Fixing code with AI... ⚡");
-
-      try {
-        const userId = storageService.getUserId();
-        const suggestions = await apiClient.getSuggestions(
-          selectedText,
-          editor.document.languageId
-        );
-
-        if (suggestions.length > 0) {
-          const suggestion = suggestions[0];
-          const apply = await vscode.window.showInformationMessage(
-            `Apply suggestion: ${suggestion.title}?`,
-            "Apply",
-            "Cancel"
-          );
-
-          if (apply === "Apply") {
-            await editor.edit((editBuilder) => {
-              editBuilder.replace(selection, suggestion.suggestedCode);
-            });
-
-            await apiClient.applyFix(userId, suggestion.id, suggestion.suggestedCode);
-            vscode.window.showInformationMessage("✅ Code fixed!");
-          }
-        }
-      } catch (error) {
-        vscode.window.showErrorMessage(`Error: ${error}`);
-      }
-    }
-  );
-
-  // Analyze Code
-  const analyzeCodeCmd = vscode.commands.registerCommand(
-    "aiCodeMentor.analyzeCode",
-    async () => {
-      const editor = vscode.window.activeTextEditor;
-      if (!editor) {
-        vscode.window.showErrorMessage("No active editor");
-        return;
-      }
-
-      vscode.window.showInformationMessage("Analyzing code... ⚡");
-
-      try {
-        const suggestions = await apiClient.getSuggestions(
-          editor.document.getText(),
-          editor.document.languageId
-        );
-
-        if (suggestions.length > 0) {
-          await vscode.commands.executeCommand("aiCodeMentor.openChat");
-          vscode.window.showInformationMessage(
-            `Found ${suggestions.length} suggestions!`
-          );
-        } else {
-          vscode.window.showInformationMessage("No suggestions found");
-        }
-      } catch (error) {
-        vscode.window.showErrorMessage(`Error: ${error}`);
-      }
-    }
-  );
-
-  // Open Chat
-  const openChatCmd = vscode.commands.registerCommand(
-    "aiCodeMentor.openChat",
-    () => {
-      try {
-        console.log("🔷 Opening Chat Panel...");
-        console.log("Context URI:", context.extensionUri);
-        console.log("API Client:", apiClient ? "✅ ready" : "❌ not ready");
-        console.log("Storage Service:", storageService ? "✅ ready" : "❌ not ready");
-        
-        ChatWebviewProvider.show(context.extensionUri, apiClient, storageService);
-        console.log("✅ Chat Panel opened successfully");
-      } catch (error) {
-        console.error("❌ Error opening chat:", error);
-        vscode.window.showErrorMessage(`Failed to open chat: ${error}`);
-      }
-    }
-  );
-
-  // View Dashboard
-  const viewDashboardCmd = vscode.commands.registerCommand(
-    "aiCodeMentor.viewDashboard",
-    () => {
-      DashboardWebviewProvider.show(context.extensionUri, apiClient, storageService);
-    }
-  );
-
-  // Test API Key
-  const testApiKeyCmd = vscode.commands.registerCommand(
-    "aiCodeMentor.testApiKey",
-    async () => {
-      try {
-        console.log("🧪 Testing API Key...");
-        vscode.window.showInformationMessage("🧪 Testing DEBUGXIA API Key... Check Debug Console for results");
-        
-        const isValid = await aiAnalysisService.testApiKey();
-        
-        if (isValid) {
-          vscode.window.showInformationMessage("✅ API Key is VALID! DEBUGXIA is ready to analyze code.");
-          console.log("🎉 API Key test PASSED!");
-        } else {
-          vscode.window.showErrorMessage("❌ API Key test FAILED. Check Debug Console for error details.");
-          console.error("❌ API Key test failed - see console output above for details");
-        }
-      } catch (error) {
-        console.error("❌ Error testing API key:", error);
-        vscode.window.showErrorMessage(`Error testing API key: ${error}`);
-      }
-    }
-  );
-
-  context.subscriptions.push(
-    openPanelCmd,
-    explainErrorCmd,
-    fixCodeCmd,
-    analyzeCodeCmd,
-    openChatCmd,
-    viewDashboardCmd,
-    testApiKeyCmd
-  );
   } catch (error) {
     console.error("❌ Error registering commands:", error);
     vscode.window.showErrorMessage(`Failed to register commands: ${error}`);

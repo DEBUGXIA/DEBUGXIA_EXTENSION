@@ -8829,7 +8829,7 @@ var require_mime_types = __commonJS({
   "node_modules/mime-types/index.js"(exports2) {
     "use strict";
     var db = require_mime_db();
-    var extname2 = require("path").extname;
+    var extname3 = require("path").extname;
     var EXTRACT_TYPE_REGEXP = /^\s*([^;\s]*)(?:;|\s|$)/;
     var TEXT_TYPE_REGEXP = /^text\//i;
     exports2.charset = charset;
@@ -8880,11 +8880,11 @@ var require_mime_types = __commonJS({
       }
       return exts[0];
     }
-    function lookup(path3) {
-      if (!path3 || typeof path3 !== "string") {
+    function lookup(path4) {
+      if (!path4 || typeof path4 !== "string") {
         return false;
       }
-      var extension2 = extname2("x." + path3).toLowerCase().substr(1);
+      var extension2 = extname3("x." + path4).toLowerCase().substr(1);
       if (!extension2) {
         return false;
       }
@@ -9989,7 +9989,7 @@ var require_form_data = __commonJS({
     "use strict";
     var CombinedStream = require_combined_stream();
     var util3 = require("util");
-    var path3 = require("path");
+    var path4 = require("path");
     var http3 = require("http");
     var https2 = require("https");
     var parseUrl = require("url").parse;
@@ -10117,11 +10117,11 @@ var require_form_data = __commonJS({
     FormData3.prototype._getContentDisposition = function(value, options) {
       var filename;
       if (typeof options.filepath === "string") {
-        filename = path3.normalize(options.filepath).replace(/\\/g, "/");
+        filename = path4.normalize(options.filepath).replace(/\\/g, "/");
       } else if (options.filename || value && (value.name || value.path)) {
-        filename = path3.basename(options.filename || value && (value.name || value.path));
+        filename = path4.basename(options.filename || value && (value.name || value.path));
       } else if (value && value.readable && hasOwn(value, "httpVersion")) {
-        filename = path3.basename(value.client._httpMessage.path || "");
+        filename = path4.basename(value.client._httpMessage.path || "");
       }
       if (filename) {
         return 'filename="' + filename + '"';
@@ -11659,6 +11659,7 @@ __export(extension_exports, {
 });
 module.exports = __toCommonJS(extension_exports);
 var vscode6 = __toESM(require("vscode"));
+var path3 = __toESM(require("path"));
 
 // node_modules/axios/lib/helpers/bind.js
 function bind(fn, thisArg) {
@@ -12190,10 +12191,10 @@ function isVisitable(thing) {
 function removeBrackets(key) {
   return utils_default.endsWith(key, "[]") ? key.slice(0, -2) : key;
 }
-function renderKey(path3, key, dots) {
-  if (!path3)
+function renderKey(path4, key, dots) {
+  if (!path4)
     return key;
-  return path3.concat(key).map(function each(token, i) {
+  return path4.concat(key).map(function each(token, i) {
     token = removeBrackets(token);
     return !dots && i ? "[" + token + "]" : token;
   }).join(dots ? "." : "");
@@ -12247,13 +12248,13 @@ function toFormData(obj, formData, options) {
     }
     return value;
   }
-  function defaultVisitor(value, key, path3) {
+  function defaultVisitor(value, key, path4) {
     let arr = value;
     if (utils_default.isReactNative(formData) && utils_default.isReactNativeBlob(value)) {
-      formData.append(renderKey(path3, key, dots), convertValue(value));
+      formData.append(renderKey(path4, key, dots), convertValue(value));
       return false;
     }
-    if (value && !path3 && typeof value === "object") {
+    if (value && !path4 && typeof value === "object") {
       if (utils_default.endsWith(key, "{}")) {
         key = metaTokens ? key : key.slice(0, -2);
         value = JSON.stringify(value);
@@ -12272,7 +12273,7 @@ function toFormData(obj, formData, options) {
     if (isVisitable(value)) {
       return true;
     }
-    formData.append(renderKey(path3, key, dots), convertValue(value));
+    formData.append(renderKey(path4, key, dots), convertValue(value));
     return false;
   }
   const stack = [];
@@ -12281,17 +12282,17 @@ function toFormData(obj, formData, options) {
     convertValue,
     isVisitable
   });
-  function build(value, path3) {
+  function build(value, path4) {
     if (utils_default.isUndefined(value))
       return;
     if (stack.indexOf(value) !== -1) {
-      throw Error("Circular reference detected in " + path3.join("."));
+      throw Error("Circular reference detected in " + path4.join("."));
     }
     stack.push(value);
     utils_default.forEach(value, function each(el, key) {
-      const result = !(utils_default.isUndefined(el) || el === null) && visitor.call(formData, el, utils_default.isString(key) ? key.trim() : key, path3, exposedHelpers);
+      const result = !(utils_default.isUndefined(el) || el === null) && visitor.call(formData, el, utils_default.isString(key) ? key.trim() : key, path4, exposedHelpers);
       if (result === true) {
-        build(el, path3 ? path3.concat(key) : [key]);
+        build(el, path4 ? path4.concat(key) : [key]);
       }
     });
     stack.pop();
@@ -12503,7 +12504,7 @@ var platform_default = {
 // node_modules/axios/lib/helpers/toURLEncodedForm.js
 function toURLEncodedForm(data, options) {
   return toFormData_default(data, new platform_default.classes.URLSearchParams(), {
-    visitor: function(value, key, path3, helpers) {
+    visitor: function(value, key, path4, helpers) {
       if (platform_default.isNode && utils_default.isBuffer(value)) {
         this.append(key, value.toString("base64"));
         return false;
@@ -12533,12 +12534,12 @@ function arrayToObject(arr) {
   return obj;
 }
 function formDataToJSON(formData) {
-  function buildPath(path3, value, target, index) {
-    let name = path3[index++];
+  function buildPath(path4, value, target, index) {
+    let name = path4[index++];
     if (name === "__proto__")
       return true;
     const isNumericKey = Number.isFinite(+name);
-    const isLast = index >= path3.length;
+    const isLast = index >= path4.length;
     name = !name && utils_default.isArray(target) ? target.length : name;
     if (isLast) {
       if (utils_default.hasOwnProp(target, name)) {
@@ -12551,7 +12552,7 @@ function formDataToJSON(formData) {
     if (!target[name] || !utils_default.isObject(target[name])) {
       target[name] = [];
     }
-    const result = buildPath(path3, value, target[name], index);
+    const result = buildPath(path4, value, target[name], index);
     if (result && utils_default.isArray(target[name])) {
       target[name] = arrayToObject(target[name]);
     }
@@ -13937,9 +13938,9 @@ var http_default = isHttpAdapterSupported && function httpAdapter(config) {
       auth = urlUsername + ":" + urlPassword;
     }
     auth && headers.delete("authorization");
-    let path3;
+    let path4;
     try {
-      path3 = buildURL(
+      path4 = buildURL(
         parsed.pathname + parsed.search,
         config.params,
         config.paramsSerializer
@@ -13957,7 +13958,7 @@ var http_default = isHttpAdapterSupported && function httpAdapter(config) {
       false
     );
     const options = {
-      path: path3,
+      path: path4,
       method,
       headers: headers.toJSON(),
       agents: { http: config.httpAgent, https: config.httpsAgent },
@@ -14208,15 +14209,15 @@ var isURLSameOrigin_default = platform_default.hasStandardBrowserEnv ? /* @__PUR
 var cookies_default = platform_default.hasStandardBrowserEnv ? (
   // Standard browser envs support document.cookie
   {
-    write(name, value, expires, path3, domain, secure, sameSite) {
+    write(name, value, expires, path4, domain, secure, sameSite) {
       if (typeof document === "undefined")
         return;
       const cookie = [`${name}=${encodeURIComponent(value)}`];
       if (utils_default.isNumber(expires)) {
         cookie.push(`expires=${new Date(expires).toUTCString()}`);
       }
-      if (utils_default.isString(path3)) {
-        cookie.push(`path=${path3}`);
+      if (utils_default.isString(path4)) {
+        cookie.push(`path=${path4}`);
       }
       if (utils_default.isString(domain)) {
         cookie.push(`domain=${domain}`);
@@ -16752,26 +16753,26 @@ var ChatWebviewProvider = class _ChatWebviewProvider {
       const seenPaths = /* @__PURE__ */ new Set();
       const activeEditor = vscode4.window.activeTextEditor;
       if (activeEditor) {
-        const path3 = activeEditor.document.uri.fsPath;
+        const path4 = activeEditor.document.uri.fsPath;
         const name = activeEditor.document.fileName.split(/[\\/]/).pop() || "Untitled";
-        if (!seenPaths.has(path3)) {
-          availableFiles.push({ path: path3, name });
-          seenPaths.add(path3);
+        if (!seenPaths.has(path4)) {
+          availableFiles.push({ path: path4, name });
+          seenPaths.add(path4);
         }
       }
       vscode4.window.visibleTextEditors.forEach((editor) => {
-        const path3 = editor.document.uri.fsPath;
+        const path4 = editor.document.uri.fsPath;
         const name = editor.document.fileName.split(/[\\/]/).pop() || "Untitled";
-        if (!seenPaths.has(path3) && editor.document.languageId !== "plaintext") {
-          availableFiles.push({ path: path3, name });
-          seenPaths.add(path3);
+        if (!seenPaths.has(path4) && editor.document.languageId !== "plaintext") {
+          availableFiles.push({ path: path4, name });
+          seenPaths.add(path4);
         }
       });
       for (const cachedFile of this.errorFileCache.values()) {
-        const path3 = cachedFile.context.filePath;
-        if (!seenPaths.has(path3)) {
-          availableFiles.push({ path: path3, name: cachedFile.context.fileName });
-          seenPaths.add(path3);
+        const path4 = cachedFile.context.filePath;
+        if (!seenPaths.has(path4)) {
+          availableFiles.push({ path: path4, name: cachedFile.context.fileName });
+          seenPaths.add(path4);
         }
       }
       console.log(`\u26A1 [FAST MODE] Found ${availableFiles.length} available files to analyze`);
@@ -17826,6 +17827,50 @@ var DashboardWebviewProvider = class _DashboardWebviewProvider {
     this.extensionUri = extensionUri;
     this.apiClient = apiClient2;
     this.storageService = storageService2;
+    this.discoveredFiles = [];
+  }
+  /**
+   * Discover Python files in the workspace
+   * Filters out test files, mock files, and temporary files
+   */
+  async discoverPythonFiles() {
+    try {
+      console.log("\u{1F50D} Discovering Python files in workspace...");
+      const pythonFiles = await vscode5.workspace.findFiles("**/*.py", "**/node_modules/**", 100);
+      const excludePatterns = [
+        /test.*\.py$/i,
+        // test*.py
+        /.*test\.py$/i,
+        // *test.py
+        /_old\.py$/i,
+        // *_old.py
+        /mock.*\.py$/i,
+        // mock*.py
+        /.*mock\.py$/i,
+        // *mock.py
+        /temp.*\.py$/i,
+        // temp*.py
+        /tmp.*\.py$/i,
+        // tmp*.py
+        /\.test\./i,
+        // *.test.*
+        /example.*\.py$/i,
+        // example*.py
+        /.*example\.py$/i,
+        // *example.py
+        /fixture.*\.py$/i
+        // fixture*.py
+      ];
+      const filteredFiles = pythonFiles.filter((file) => {
+        const fileName = file.fsPath.split("\\").pop()?.split("/").pop() || "";
+        return !excludePatterns.some((pattern) => pattern.test(fileName));
+      });
+      console.log(`\u2705 Found ${pythonFiles.length} Python files, filtered to ${filteredFiles.length} production files`);
+      return filteredFiles;
+    } catch (error) {
+      console.error("\u274C Error discovering Python files:", error);
+      return [];
+    }
   }
   async deserializeWebviewPanel(webviewPanel, state) {
     _DashboardWebviewProvider.currentPanel = webviewPanel;
@@ -17836,10 +17881,13 @@ var DashboardWebviewProvider = class _DashboardWebviewProvider {
   static show(extensionUri, apiClient2, storageService2) {
     if (_DashboardWebviewProvider.currentPanel) {
       _DashboardWebviewProvider.currentPanel.reveal(vscode5.ViewColumn.Beside);
+      if (_DashboardWebviewProvider.provider) {
+        _DashboardWebviewProvider.provider.update();
+      }
     } else {
       const panel = vscode5.window.createWebviewPanel(
         "aiCodeMentor.dashboard",
-        "AI Code Mentor Dashboard",
+        "DEBUGXIA",
         vscode5.ViewColumn.Beside,
         {
           enableScripts: true,
@@ -17852,13 +17900,44 @@ var DashboardWebviewProvider = class _DashboardWebviewProvider {
         apiClient2,
         storageService2
       );
+      _DashboardWebviewProvider.provider = provider;
       provider.deserializeWebviewPanel(panel, null);
+      panel.webview.onDidReceiveMessage(
+        async (message) => provider.onDidReceiveMessage(message),
+        null
+      );
       panel.onDidDispose(
         () => {
           _DashboardWebviewProvider.currentPanel = void 0;
+          _DashboardWebviewProvider.provider = void 0;
         },
         null
       );
+    }
+  }
+  static updatePanel() {
+    if (_DashboardWebviewProvider.provider && _DashboardWebviewProvider.currentPanel) {
+      console.log("\u{1F4CA} Triggering dashboard update...");
+      _DashboardWebviewProvider.provider.update();
+    }
+  }
+  /**
+   * Update the webview with latest data
+   */
+  async update() {
+    try {
+      if (_DashboardWebviewProvider.currentPanel) {
+        console.log("\u{1F4DD} Updating dashboard HTML...");
+        const html = await this.getHtmlForWebview(
+          _DashboardWebviewProvider.currentPanel.webview
+        );
+        _DashboardWebviewProvider.currentPanel.webview.html = html;
+        console.log("\u2705 Dashboard HTML updated");
+      } else {
+        console.warn("\u26A0\uFE0F No dashboard panel to update");
+      }
+    } catch (error) {
+      console.error("\u274C Error updating dashboard:", error);
     }
   }
   async getHtmlForWebview(webview) {
@@ -17866,14 +17945,107 @@ var DashboardWebviewProvider = class _DashboardWebviewProvider {
     const analytics = await this.apiClient.getUserAnalytics(userId);
     const errorHistory = this.storageService.getErrorHistory();
     const analysisHistory = this.storageService.getAnalysisHistory();
-    const stats = this.calculateAIStats(analysisHistory, errorHistory);
+    this.discoveredFiles = await this.discoverPythonFiles();
+    const hasAnalysis = analysisHistory && analysisHistory.length > 0;
+    const stats = hasAnalysis ? this.calculateAIStats(analysisHistory, errorHistory) : null;
+    const currentFile = hasAnalysis ? analysisHistory[analysisHistory.length - 1] : null;
+    let fileListHtml = "";
+    if (hasAnalysis) {
+      fileListHtml = analysisHistory.map((f, idx) => {
+        const fileName = f.fileName ? f.fileName.split("\\").pop().split("/").pop() : `File ${idx + 1}`;
+        return `<option value="analyzed-${idx}">\u2713 ${fileName}</option>`;
+      }).join("");
+    }
+    const analyzedPaths = new Set(analysisHistory.map((f) => f.fileName));
+    this.discoveredFiles.forEach((file) => {
+      const fsPath = file.fsPath;
+      if (!analyzedPaths.has(fsPath)) {
+        const fileName = fsPath.split("\\").pop()?.split("/").pop() || "Unknown";
+        fileListHtml += `<option value="file-${fsPath}">\u{1F4C4} ${fileName}</option>`;
+      }
+    });
+    const fileInfoContent = hasAnalysis && currentFile ? `
+          <!-- File Info Card -->
+          <div class="file-info-card">
+            <div class="file-header">
+              <div class="file-icon">\u{1F4C4}</div>
+              <div class="file-details">
+                <div class="file-name">${currentFile.fileName ? currentFile.fileName.split("\\").pop().split("/").pop() : "Unknown file"}</div>
+                <div class="file-stats">${currentFile.lines || 0} lines | ${currentFile.functions || 0} function | ${currentFile.classes || 0} classes</div>
+              </div>
+            </div>
+
+            <!-- Stats Grid -->
+            <div class="stats-grid">
+              <div class="stat-card">
+                <div class="stat-title">Error Score</div>
+                <div class="stat-value">${stats ? stats.errorScore : 0}</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-title">Code Quality</div>
+                <div class="stat-value">${stats ? stats.codeQualityScore : 0}</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-title">Optimization</div>
+                <div class="stat-value">${stats ? stats.optimizationScore : 0}</div>
+              </div>
+            </div>
+
+            <!-- Analysis Summary -->
+            <div class="analysis-section">
+              <div class="section-header">
+                <div class="section-icon">\u{1F4DD}</div>
+                <div class="section-title">Analysis Summary</div>
+              </div>
+              <div class="section-text">${currentFile.summary || "No analysis available"}</div>
+            </div>
+
+            <!-- Issues Found -->
+            <div class="issues-section">
+              <div class="issues-header">
+                <div class="section-icon">\u26A0\uFE0F</div>
+                <div class="issues-title">Issues Found (${errorHistory.length})</div>
+              </div>
+              <div class="issues-list">${errorHistory.length > 0 ? errorHistory.map((e) => `<div class="issue-item">\u2022 ${e.message || e.type || "Unknown issue"}</div>`).join("") : '<div class="issue-item">No issues found in this file</div>'}</div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="action-buttons">
+              <button class="action-btn" onclick="fixError()">
+                <div class="action-icon" style="color: #8af782;">\u{1F41B}</div>
+                <div class="action-label">Fix Error</div>
+              </button>
+              <button class="action-btn" onclick="optimize()">
+                <div class="action-icon" style="color: #d7e472;">\u26A1</div>
+                <div class="action-label">Optimize</div>
+              </button>
+              <button class="action-btn" onclick="openTerminal()">
+                <div class="action-icon" style="color: #adcaf0;">\u279C</div>
+                <div class="action-label">Terminal</div>
+              </button>
+            </div>
+          </div>
+    ` : `
+          <!-- Empty State -->
+          <div class="empty-state">
+            <div class="empty-icon">\u{1F4ED}</div>
+            <div class="empty-title">No Files Analyzed Yet</div>
+            <div class="empty-text">Select a Python file from the dropdown above to analyze it and get AI insights.</div>
+            ${this.discoveredFiles.length === 0 ? `
+              <button class="browse-btn" onclick="browseFiles()" style="margin-top: 16px;">
+                <span>\u{1F50D}</span>
+                <span>Browse & Analyze</span>
+              </button>
+            ` : ""}
+          </div>
+    `;
     return `
       <!DOCTYPE html>
       <html lang="en">
       <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>AI Code Mentor Dashboard</title>
+        <title>DEBUGXIA</title>
         <style>
           * {
             margin: 0;
@@ -17882,187 +18054,323 @@ var DashboardWebviewProvider = class _DashboardWebviewProvider {
           }
 
           body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto;
-            background: linear-gradient(135deg, #1e1e1e 0%, #2d2d2d 100%);
-            color: #e0e0e0;
-            padding: 24px;
-            line-height: 1.6;
-          }
-
-          h1 {
-            color: #00d4ff;
-            margin-bottom: 8px;
-            font-size: 28px;
-          }
-
-          .subtitle {
-            color: #888;
-            margin-bottom: 24px;
-            font-size: 14px;
-          }
-
-          .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 16px;
-            margin-bottom: 32px;
-          }
-
-          .stat-card {
-            background: rgba(0, 212, 255, 0.05);
-            border: 2px solid rgba(0, 212, 255, 0.2);
-            border-radius: 12px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            background-color: #0f0f0f;
+            background-image: url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%22100%22%3E%3Crect fill=%22%230f0f0f%22 width=%22100%22 height=%22100%22/%3E%3C/svg%3E');
+            color: white;
             padding: 20px;
-            backdrop-filter: blur(10px);
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
+            overflow-y: auto;
+            overflow-x: hidden;
           }
 
-          .stat-card:hover {
-            border-color: #00d4ff;
-            box-shadow: 0 8px 32px rgba(0, 212, 255, 0.2);
-            transform: translateY(-4px);
-          }
-
-          .stat-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 2px;
-            background: linear-gradient(90deg, transparent, #00d4ff, transparent);
-          }
-
-          .stat-value {
-            font-size: 32px;
-            font-weight: 700;
-            color: #00d4ff;
-            margin-bottom: 8px;
-          }
-
-          .stat-label {
-            font-size: 12px;
-            color: #888;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-          }
-
-          .section {
-            margin-bottom: 32px;
-          }
-
-          .section-title {
-            color: #00ffff;
-            font-size: 16px;
-            margin-bottom: 16px;
+          .container {
+            background-color: #111827;
+            border: 2px solid #6B7280;
+            border-radius: 12px;
             display: flex;
+            flex-direction: column;
+            gap: 12px;
+            padding: 20px;
+            max-width: 100%;
+          }
+
+          .header {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+          }
+
+          .logo-text {
+            font-size: 24px;
+            font-weight: 700;
+            color: #02AAE9;
+            letter-spacing: 2px;
+            flex-shrink: 0;
+          }
+
+          .issue-badge {
+            padding: 8px 16px;
+            border: 2px solid #6B7280;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            color: white;
+          }
+
+          .file-selector {
+            display: flex;
+            flex-direction: row;
             align-items: center;
             gap: 8px;
-          }
-
-          .chart-container {
-            background: rgba(0, 212, 255, 0.05);
-            border: 1px solid rgba(0, 212, 255, 0.2);
-            border-radius: 12px;
-            padding: 20px;
-            backdrop-filter: blur(10px);
-          }
-
-          .bar {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 16px;
-          }
-
-          .bar-label {
-            min-width: 100px;
-            font-size: 12px;
-            color: #888;
-          }
-
-          .bar-value {
-            flex: 1;
-            height: 24px;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 4px;
-            overflow: hidden;
-            position: relative;
-          }
-
-          .bar-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #00d4ff, #00ffff);
-            border-radius: 4px;
-            animation: fillAnimation 0.8s ease-out;
-          }
-
-          @keyframes fillAnimation {
-            from {
-              width: 0 !important;
-            }
-          }
-
-          .bar-number {
-            min-width: 40px;
-            text-align: right;
-            font-size: 12px;
-            color: #00d4ff;
-            font-weight: 600;
-          }
-
-          .error-list {
-            max-height: 300px;
-            overflow-y: auto;
-          }
-
-          .error-item {
-            background: rgba(0, 0, 0, 0.3);
-            border-left: 3px solid #ff6b6b;
-            padding: 12px;
-            margin-bottom: 8px;
-            border-radius: 4px;
-            font-size: 12px;
-            line-height: 1.5;
-          }
-
-          .error-type {
-            color: #ff6b6b;
-            font-weight: 600;
-            margin-bottom: 4px;
-          }
-
-          .error-message {
-            color: #888;
-          }
-
-          .progress-bar {
-            width: 100%;
-            height: 8px;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 4px;
-            overflow: hidden;
             margin-top: 12px;
           }
 
-          .progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #00d4ff, #00ffff);
-            animation: fillAnimation 1s ease-out;
+          .folder-icon {
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
           }
 
-          .badge {
-            display: inline-block;
-            padding: 4px 8px;
-            background: rgba(0, 212, 255, 0.2);
-            border: 1px solid rgba(0, 212, 255, 0.5);
-            border-radius: 4px;
-            font-size: 11px;
-            color: #00d4ff;
-            margin-right: 4px;
-            margin-bottom: 4px;
+          .file-selector-label {
+            font-weight: 500;
+            font-size: 14px;
+            color: white;
+            letter-spacing: 0.3px;
+            white-space: nowrap;
+          }
+
+          .file-select-wrap {
+            margin-right: 20px;
+            width: 50%;
+            display: flex;
+            align-items: center;
+          }
+
+          .file-select {
+            border: 2px solid white;
+            color: white;
+            padding: 6px 8px;
+            border-radius: 6px;
+            width: 120px;
+            font-weight: 500;
+            font-size: 14px;
+            background-color: transparent;
+            cursor: pointer;
+          }
+
+          .file-select option {
+            background-color: #111827;
+            color: white;
+          }
+
+          .browse-btn {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            border: 2px solid #6B7280;
+            border-radius: 6px;
+            padding: 6px 8px;
+            gap: 6px;
+            cursor: pointer;
+            background-color: transparent;
+            color: white;
+            font-weight: 500;
+            font-size: 14px;
+            margin-right: 8px;
+          }
+
+          .browse-btn:hover {
+            background-color: rgba(107, 114, 128, 0.2);
+          }
+
+          .trash-btn {
+            background-color: #111827;
+            border: 2px solid #6B7280;
+            border-radius: 6px;
+            padding: 6px 10px;
+            cursor: pointer;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            transition: all 0.2s ease;
+            min-width: 44px;
+            min-height: 44px;
+          }
+
+          .trash-btn:hover {
+            background-color: #dc2626;
+            border-color: #ef4444;
+            transform: scale(1.05);
+          }
+
+          .trash-btn:active {
+            background-color: #b91c1c;
+            transform: scale(0.95);
+          }
+
+          .file-info-card {
+            background-color: #0f0f0f;
+            border: 2px solid #6B7280;
+            border-radius: 12px;
+            padding: 12px 16px;
+            margin-top: 20px;
+          }
+
+          .file-header {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 20px;
+            margin-top: 20px;
+          }
+
+          .file-icon {
+            width: 24px;
+            height: 24px;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          }
+
+          .file-details {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 4px;
+          }
+
+          .file-name {
+            font-weight: 500;
+            font-size: 20px;
+            color: #f5f5f5;
+            letter-spacing: 0.3px;
+          }
+
+          .file-stats {
+            font-weight: 500;
+            font-size: 14px;
+            color: #9CA3AF;
+            letter-spacing: 0.3px;
+          }
+
+          .stats-grid {
+            display: flex;
+            flex-direction: row;
+            gap: 12px;
+            margin-top: 32px;
+          }
+
+          .stat-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #1f2937;
+            border: 2px solid #6B7280;
+            border-radius: 10px;
+            padding: 12px 16px;
+            flex: 1;
+          }
+
+          .stat-title {
+            font-weight: 500;
+            font-size: 13px;
+            color: #D1D5DB;
+            letter-spacing: 0.3px;
+            margin-bottom: 8px;
+          }
+
+          .stat-value {
+            font-weight: 600;
+            font-size: 32px;
+            color: #2563eb;
+            letter-spacing: 0.3px;
+          }
+
+          .analysis-section {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 8px;
+            margin-top: 20px;
+          }
+
+          .section-header {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 20px;
+          }
+
+          .section-icon {
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          }
+
+          .section-title {
+            font-weight: 500;
+            font-size: 13px;
+            color: #60a5fa;
+            letter-spacing: 0.3px;
+          }
+
+          .section-text {
+            font-weight: 500;
+            font-size: 14px;
+            color: #9CA3AF;
+            letter-spacing: 0.3px;
+          }
+
+          .issues-section {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 8px;
+            margin-top: 20px;
+          }
+
+          .issues-header {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 20px;
+          }
+
+          .issues-title {
+            font-weight: 500;
+            font-size: 13px;
+            color: #f87171;
+            letter-spacing: 0.3px;
+          }
+
+          .action-buttons {
+            display: flex;
+            flex-direction: row;
+            gap: 12px;
+            margin-bottom: 20px;
+            margin-top: 20px;
+          }
+
+          .action-btn {
+            background-color: #1f2937;
+            border: 2px solid #6B7280;
+            border-radius: 8px;
+            padding: 12px 16px;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            flex: 1;
+            transition: all 0.2s ease;
+          }
+
+          .action-btn:hover {
+            border-color: #9CA3AF;
+            background-color: #374151;
+          }
+
+          .action-icon {
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          }
+
+          .action-label {
+            font-weight: 600;
+            font-size: 13px;
+            color: #2563eb;
+            letter-spacing: 0.3px;
           }
 
           ::-webkit-scrollbar {
@@ -18074,150 +18382,191 @@ var DashboardWebviewProvider = class _DashboardWebviewProvider {
           }
 
           ::-webkit-scrollbar-thumb {
-            background: rgba(0, 212, 255, 0.3);
+            background: #6B7280;
             border-radius: 3px;
           }
 
           ::-webkit-scrollbar-thumb:hover {
-            background: rgba(0, 212, 255, 0.6);
+            background: #9CA3AF;
           }
 
-          @media (max-width: 600px) {
-            body {
-              padding: 16px;
-            }
+          .issues-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            width: 100%;
+          }
 
-            .grid {
-              grid-template-columns: 1fr;
-            }
+          .issue-item {
+            font-weight: 400;
+            font-size: 13px;
+            color: #D1D5DB;
+            padding: 6px 0;
+            letter-spacing: 0.3px;
+          }
 
-            .stat-value {
-              font-size: 24px;
-            }
+          .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            padding: 80px 20px;
+            text-align: center;
+            border: 2px dashed #6B7280;
+            border-radius: 12px;
+            margin-top: 20px;
+            background-color: rgba(107, 114, 128, 0.05);
+          }
+
+          .empty-icon {
+            font-size: 48px;
+            opacity: 0.6;
+          }
+
+          .empty-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #D1D5DB;
+            letter-spacing: 0.3px;
+          }
+
+          .empty-text {
+            font-size: 13px;
+            color: #9CA3AF;
+            max-width: 300px;
+            letter-spacing: 0.3px;
           }
         </style>
       </head>
       <body>
-        <h1>\u{1F4CA} Your Coding Progress</h1>
-        <p class="subtitle">Track your improvements and coding insights from AI Code Mentor</p>
+        <div class="container">
+          <!-- Header -->
+          <div class="header">
+            <div class="logo-text">DEBUGXIA</div>
+            <div class="issue-badge">${errorHistory.length} issue${errorHistory.length !== 1 ? "s" : ""}</div>
+          </div>
 
-        <div class="grid">
-          <div class="stat-card">
-            <div class="stat-value">${stats.errorScore}</div>
-            <div class="stat-label">Error Score (AI)</div>
+          <!-- File Selector -->
+          <div class="file-selector">
+            <div class="folder-icon">\u{1F4C1}</div>
+            <div class="file-selector-label">Select File :</div>
+            <div class="file-select-wrap">
+              <select class="file-select">
+                <option value="">-- Select a file to analyze --</option>
+                ${fileListHtml}
+              </select>
+            </div>
+            <button class="browse-btn" onclick="browseFiles()">
+              <span>\u{1F50D}</span>
+              <span>Browse</span>
+            </button>
+            <button class="trash-btn" onclick="clearAnalysis()">\u{1F5D1}\uFE0F</button>
           </div>
-          <div class="stat-card">
-            <div class="stat-value">${stats.codeQualityScore}</div>
-            <div class="stat-label">Code Quality (AI)</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-value">${stats.optimizationScore}</div>
-            <div class="stat-label">Optimization (AI)</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-value">${stats.improvementRate}%</div>
-            <div class="stat-label">Improvement Rate</div>
-          </div>
-        </div>
 
-        <div class="section">
-          <div class="section-title">\u26A1 AI Analysis Scores</div>
-          <div class="chart-container">
-            <div class="bar">
-              <div class="bar-label">Error Score</div>
-              <div class="bar-value">
-                <div class="bar-fill" style="width: ${stats.errorScore}%"></div>
-              </div>
-              <div class="bar-number">${stats.errorScore}</div>
-            </div>
-            <div class="bar">
-              <div class="bar-label">Code Quality</div>
-              <div class="bar-value">
-                <div class="bar-fill" style="width: ${stats.codeQualityScore}%"></div>
-              </div>
-              <div class="bar-number">${stats.codeQualityScore}</div>
-            </div>
-            <div class="bar">
-              <div class="bar-label">Optimization</div>
-              <div class="bar-value">
-                <div class="bar-fill" style="width: ${stats.optimizationScore}%"></div>
-              </div>
-              <div class="bar-number">${stats.optimizationScore}</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="section">
-          <div class="section-title">\u{1F4C8} Performance Metrics</div>
-          <div class="chart-container">
-            <div class="bar">
-              <div class="bar-label">Total Errors</div>
-              <div class="bar-value">
-                <div class="bar-fill" style="width: ${Math.min(100, stats.totalErrors * 5)}%"></div>
-              </div>
-              <div class="bar-number">${stats.totalErrors}</div>
-            </div>
-            <div class="bar">
-              <div class="bar-label">Fixed</div>
-              <div class="bar-value">
-                <div class="bar-fill" style="width: ${stats.improvementRate}%"></div>
-              </div>
-              <div class="bar-number">${stats.fixedErrors}</div>
-            </div>
-            <div class="bar">
-              <div class="bar-label">Trend</div>
-              <div class="bar-value">
-                <div class="bar-fill" style="width: 100%; background: ${stats.trend === "improving" ? "#20c997" : stats.trend === "declining" ? "#dc3545" : "#ffc107"};"></div>
-              </div>
-              <div class="bar-number">${stats.trend}</div>
-            </div>
-            <div class="bar">
-              <div class="bar-label">Analyses Done</div>
-              <div class="bar-value">
-                <div class="bar-fill" style="width: ${Math.min(100, stats.analysisCount * 10)}%"></div>
-              </div>
-              <div class="bar-number">${stats.analysisCount}</div>
-            </div>
-          </div>
-        </div>
-
-        ${errorHistory.length > 0 ? `
-          <div class="section">
-            <div class="section-title">\u{1F41B} Recent Errors</div>
-            <div class="error-list">
-              ${errorHistory.slice(-5).reverse().map(
-      (error) => `
-                <div class="error-item">
-                  <div class="error-type">${error.errorType || "Error"}</div>
-                  <div class="error-message">${error.errorMessage || error.message || "Unknown error"}</div>
-                </div>
-              `
-    ).join("")}
-            </div>
-          </div>
-        ` : ""}
-
-        <div class="section">
-          <div class="section-title">\u{1F3AF} Supported Languages</div>
-          <div class="chart-container">
-            <div>
-              <div class="badge">Python</div>
-              <div class="badge">JavaScript</div>
-              <div class="badge">TypeScript</div>
-              <div class="badge">Java</div>
-              <div class="badge">C++</div>
-              <div class="badge">C#</div>
-              <div class="badge">PHP</div>
-              <div class="badge">Ruby</div>
-              <div class="badge">Go</div>
-              <div class="badge">Rust</div>
-            </div>
-          </div>
+          ${fileInfoContent}
         </div>
 
         <script>
-          // Dashboard logic
-          console.log('Dashboard loaded');
+          console.log('\u{1F527} Dashboard script loading...');
+          
+          let vscode;
+          try {
+            vscode = acquireVsCodeApi();
+            console.log('\u2705 VS Code API acquired successfully');
+          } catch (error) {
+            console.error('\u274C Failed to acquire VS Code API:', error);
+          }
+
+          // File select dropdown change handler
+          document.addEventListener('DOMContentLoaded', function() {
+            const fileSelect = document.querySelector('.file-select');
+            if (fileSelect) {
+              fileSelect.addEventListener('change', function() {
+                const value = this.value;
+                console.log('\u{1F4C1} File selected:', value);
+                
+                if (value.startsWith('analyzed-')) {
+                  // Analyzed file selected
+                  const fileIndex = parseInt(value.replace('analyzed-', ''));
+                  vscode.postMessage({
+                    command: 'select-file',
+                    fileIndex: fileIndex
+                  });
+                } else if (value.startsWith('file-')) {
+                  // New file selected for analysis
+                  const filePath = value.replace('file-', '');
+                  console.log('\u{1F504} Analyzing new file:', filePath);
+                  vscode.postMessage({
+                    command: 'analyze-new-file',
+                    filePath: filePath
+                  });
+                }
+              });
+            }
+          });
+
+          // Browse files - opens file picker
+          function browseFiles() {
+            console.log('\u{1F4C1} browseFiles() called');
+            if (!vscode) {
+              console.error('\u274C VS Code API not available');
+              alert('Extension not ready. Try reloading VS Code.');
+              return;
+            }
+            console.log('\u{1F4E4} Sending browse-files message...');
+            vscode.postMessage({
+              command: 'browse-files',
+              type: 'python'
+            });
+            console.log('\u2705 Message sent');
+          }
+
+          // Fix error action
+          function fixError() {
+            console.log('\u{1F41B} fixError() called');
+            vscode.postMessage({
+              command: 'fix-error'
+            });
+          }
+
+          // Optimize code action
+          function optimize() {
+            console.log('\u26A1 optimize() called');
+            vscode.postMessage({
+              command: 'optimize-code'
+            });
+          }
+
+          // Open terminal action
+          function openTerminal() {
+            console.log('\u279C openTerminal() called');
+            vscode.postMessage({
+              command: 'open-terminal'
+            });
+          }
+
+          // Clear analysis - delete all history
+          function clearAnalysis() {
+            console.log('\u{1F5D1}\uFE0F clearAnalysis() called');
+            const confirmed = confirm('\u{1F5D1}\uFE0F Delete all analysis? This cannot be undone.');
+            if (confirmed) {
+              console.log('\u2705 User confirmed - sending clear-analysis command');
+              vscode.postMessage({
+                command: 'clear-analysis'
+              });
+            } else {
+              console.log('\u274C User cancelled delete');
+            }
+          }
+
+          // Handle message from extension
+          window.addEventListener('message', event => {
+            const message = event.data;
+            console.log('Dashboard received:', message);
+          });
+
+          console.log('DEBUGXIA Dashboard loaded with full functionality');
         </script>
       </body>
       </html>
@@ -18227,46 +18576,107 @@ var DashboardWebviewProvider = class _DashboardWebviewProvider {
    * Calculate AI-driven statistics from analysis history
    * Returns accurate summary metrics based on actual AI analysis
    */
+  /**
+   * Calculate AI-driven statistics from analysis history
+   * ONLY call this when there's real analysis data available
+   */
   calculateAIStats(analysisHistory, errorHistory) {
     if (analysisHistory.length === 0) {
-      return {
-        totalErrors: errorHistory.length,
-        fixedErrors: errorHistory.filter((e) => e.fixed).length,
-        errorScore: 0,
-        // Will be 0 if no analysis
-        codeQualityScore: 50,
-        optimizationScore: 45,
-        improvementRate: errorHistory.length > 0 ? Math.round(
-          errorHistory.filter((e) => e.fixed).length / errorHistory.length * 100
-        ) : 0
-      };
+      return null;
     }
-    const totalAnalyses = analysisHistory.length;
-    const avgErrorScore = Math.round(
-      analysisHistory.reduce((sum, a) => sum + (a.errorScore || 0), 0) / totalAnalyses
-    );
-    const avgCodeQualityScore = Math.round(
-      analysisHistory.reduce((sum, a) => sum + (a.codeQualityScore || 0), 0) / totalAnalyses
-    );
-    const avgOptimizationScore = Math.round(
-      analysisHistory.reduce((sum, a) => sum + (a.optimizationScore || 0), 0) / totalAnalyses
-    );
-    const fixedErrorsCount = errorHistory.filter((e) => e.fixed).length;
-    const improvementRate = errorHistory.length > 0 ? Math.round(fixedErrorsCount / errorHistory.length * 100) : 0;
-    const recentAnalyses = analysisHistory.slice(-5);
-    const olderAnalyses = analysisHistory.slice(-10, -5);
-    const recentAvg = recentAnalyses.length > 0 ? Math.round(recentAnalyses.reduce((sum, a) => sum + (a.codeQualityScore || 0), 0) / recentAnalyses.length) : avgCodeQualityScore;
-    const olderAvg = olderAnalyses.length > 0 ? Math.round(olderAnalyses.reduce((sum, a) => sum + (a.codeQualityScore || 0), 0) / olderAnalyses.length) : avgCodeQualityScore;
+    const recentAnalysis = analysisHistory[analysisHistory.length - 1];
+    const hasScoreData = recentAnalysis.errorScore !== void 0 && recentAnalysis.errorScore !== null || recentAnalysis.codeQualityScore !== void 0 && recentAnalysis.codeQualityScore !== null || recentAnalysis.optimizationScore !== void 0 && recentAnalysis.optimizationScore !== null;
+    if (!hasScoreData) {
+      return null;
+    }
     return {
-      totalErrors: errorHistory.length,
-      fixedErrors: fixedErrorsCount,
-      errorScore: avgErrorScore,
-      codeQualityScore: avgCodeQualityScore,
-      optimizationScore: avgOptimizationScore,
-      improvementRate,
-      trend: recentAvg > olderAvg ? "improving" : recentAvg < olderAvg ? "declining" : "stable",
-      analysisCount: totalAnalyses
+      errorScore: recentAnalysis.errorScore || 0,
+      codeQualityScore: recentAnalysis.codeQualityScore || 0,
+      optimizationScore: recentAnalysis.optimizationScore || 0
     };
+  }
+  /**
+   * Handle messages from the webview
+   */
+  async onDidReceiveMessage(message) {
+    console.log("\u{1F4AC} Dashboard received message:", message.command);
+    console.log("\u{1F4CB} Message details:", JSON.stringify(message));
+    switch (message.command) {
+      case "analyze-new-file":
+        console.log("\u{1F504} analyze-new-file: Analyzing file from dropdown:", message.filePath);
+        try {
+          const result = await vscode5.commands.executeCommand("debugxia.analyzeFile", message.filePath);
+          console.log("\u2705 analyze-new-file: Analysis executed, result:", result);
+        } catch (error) {
+          console.error("\u274C analyze-new-file: Error analyzing file:", error);
+          vscode5.window.showErrorMessage(`Error analyzing file: ${error}`);
+        }
+        break;
+      case "browse-files":
+        console.log("\u{1F50D} browse-files: Opening file picker...");
+        try {
+          const fileUri = await vscode5.window.showOpenDialog({
+            canSelectMany: false,
+            canSelectFiles: true,
+            canSelectFolders: false,
+            filters: {
+              "Python files": ["py"],
+              "All files": ["*"]
+            },
+            title: "Select Python file to analyze"
+          });
+          console.log("\u{1F4CB} File picker returned:", fileUri);
+          if (fileUri && fileUri[0]) {
+            const selectedFile = fileUri[0].fsPath;
+            console.log("\u2705 User selected file:", selectedFile);
+            console.log("\u{1F4DD} browse-files: Executing analyzeFile command with:", selectedFile);
+            const result = await vscode5.commands.executeCommand("debugxia.analyzeFile", selectedFile);
+            console.log("\u2705 browse-files: analyzeFile executed, result:", result);
+          } else {
+            console.log("\u274C browse-files: No file selected by user");
+          }
+        } catch (error) {
+          console.error("\u274C browse-files: Error in browse-files:", error);
+          vscode5.window.showErrorMessage(`Error browsing files: ${error}`);
+        }
+        break;
+      case "select-file":
+        const analysisHistory = this.storageService.getAnalysisHistory();
+        if (message.fileIndex >= 0 && message.fileIndex < analysisHistory.length) {
+          const selectedFile = analysisHistory[message.fileIndex];
+          console.log("Selected file:", selectedFile.fileName);
+        }
+        break;
+      case "fix-error":
+        console.log("Fix error requested");
+        vscode5.window.showInformationMessage("Opening AI fix suggestions...");
+        break;
+      case "optimize-code":
+        console.log("Optimize code requested");
+        vscode5.window.showInformationMessage("Generating optimization suggestions...");
+        break;
+      case "open-terminal":
+        console.log("Opening terminal");
+        vscode5.window.showInformationMessage("Opening terminal...");
+        break;
+      case "clear-analysis":
+        console.log("\u{1F5D1}\uFE0F clear-analysis: Clearing analysis history");
+        try {
+          await this.storageService.clearAnalysisHistory();
+          await this.storageService.clearErrorHistory();
+          console.log("\u2705 clear-analysis: Storage cleared");
+          await new Promise((r) => setTimeout(r, 100));
+          await this.update();
+          console.log("\u2705 clear-analysis: Dashboard refreshed");
+          vscode5.window.showInformationMessage("\u2705 All analysis cleared");
+        } catch (error) {
+          console.error("\u274C clear-analysis: Error:", error);
+          vscode5.window.showErrorMessage(`Error clearing analysis: ${error}`);
+        }
+        break;
+      default:
+        console.warn("\u26A0\uFE0F Unknown command:", message.command);
+    }
   }
 };
 
@@ -18351,6 +18761,12 @@ var StorageService = class {
   async clearErrorHistory() {
     await this.saveSetting("errorHistory", []);
   }
+  /**
+   * Clear analysis history
+   */
+  async clearAnalysisHistory() {
+    await this.saveSetting("analysisHistory", []);
+  }
 };
 
 // src/ascii.ts
@@ -18374,10 +18790,6 @@ var SCANNER_STARTING = `
        \u251C\u2500 Monitoring terminal output
        \u251C\u2500 Analyzing code patterns
        \u2514\u2500 Ready to detect issues
-`;
-var SCANNER_ACTIVE = `
-    \u2705 DEBUGXIA Scanner Active
-       \u2514\u2500 Watching for errors in real-time...
 `;
 function displayBanner() {
   const timestamp = (/* @__PURE__ */ new Date()).toLocaleTimeString();
@@ -18448,7 +18860,7 @@ function activate(context) {
       console.warn("\u26A0\uFE0F  API Configuration missing - some features will be disabled");
     }
     apiClient = new ApiClient(config.apiUrl || "http://localhost:8000", config.apiKey || "");
-    aiAnalysisService = new AIAnalysisService();
+    aiAnalysisService = new AIAnalysisService(config.apiKey || "");
     errorDetector = new ErrorDetector();
     console.log("\u2705 API Client, AI Analysis Service, and Error Detector initialized");
     const errorListProvider = new ErrorListProvider(errorDetector);
@@ -18477,9 +18889,6 @@ function activate(context) {
     console.log("\u2705 Dashboard Webview Provider registered");
     registerCommands(context, apiClient, errorDetector, errorListProvider);
     console.log("\u2705 Commands registered");
-    watchEditorAndTerminal(context);
-    console.log("\u2705 Editor and Terminal watcher initialized");
-    initializeScannerTerminal(context);
     const configListener = vscode6.workspace.onDidChangeConfiguration((e) => {
       if (e.affectsConfiguration("aiCodeMentor")) {
         const newConfig = getExtensionConfig();
@@ -18519,338 +18928,92 @@ function getExtensionConfig() {
 }
 function registerCommands(context, apiClient2, errorDetector2, errorListProvider) {
   try {
-    const openPanelCmd = vscode6.commands.registerCommand(
-      "aiCodeMentor.openPanel",
-      async () => {
-        try {
-          const editor = vscode6.window.activeTextEditor;
-          if (!editor) {
-            vscode6.window.showErrorMessage("No active editor");
-            return;
-          }
-          const errors = await errorDetector2.analyzeDocument(editor.document);
-          if (errors.length === 0) {
-            vscode6.window.showInformationMessage("No errors found in this file!");
-            return;
-          }
-          const selected = await vscode6.window.showQuickPick(
-            errors.map((e) => `Line ${e.line}: ${e.errorType} - ${e.errorMessage}`),
-            { placeHolder: "Select an error to analyze..." }
-          );
-          if (selected) {
-            vscode6.commands.executeCommand("aiCodeMentor.explainError");
-          }
-        } catch (error) {
-          console.error("Error in openPanelCmd:", error);
-          vscode6.window.showErrorMessage(`Error: ${error}`);
-        }
-      }
-    );
-    const explainErrorCmd = vscode6.commands.registerCommand(
-      "aiCodeMentor.explainError",
-      async () => {
-        const editor = vscode6.window.activeTextEditor;
-        if (!editor) {
-          vscode6.window.showErrorMessage("No active editor");
-          return;
-        }
-        const position = editor.selection.active;
-        const line = editor.document.lineAt(position.line);
-        vscode6.window.showInformationMessage("Analyzing error... \u26A1");
-        try {
-          const userId = storageService.getUserId();
-          const explanation = await apiClient2.analyzeError({
-            code: line.text,
-            language: editor.document.languageId,
-            errorType: "syntax",
-            errorMessage: line.text,
-            userId
-          });
-          if (explanation) {
-            showExplanationPanel(explanation);
-          } else {
-            vscode6.window.showErrorMessage("Could not analyze error");
-          }
-        } catch (error) {
-          vscode6.window.showErrorMessage(`Error: ${error}`);
-        }
-      }
-    );
-    const fixCodeCmd = vscode6.commands.registerCommand(
-      "aiCodeMentor.fixCode",
-      async () => {
-        const editor = vscode6.window.activeTextEditor;
-        if (!editor) {
-          vscode6.window.showErrorMessage("No active editor");
-          return;
-        }
-        const selection = editor.selection;
-        const selectedText = editor.document.getText(selection);
-        if (!selectedText) {
-          vscode6.window.showErrorMessage("Please select code to fix");
-          return;
-        }
-        vscode6.window.showInformationMessage("Fixing code with AI... \u26A1");
-        try {
-          const userId = storageService.getUserId();
-          const suggestions = await apiClient2.getSuggestions(
-            selectedText,
-            editor.document.languageId
-          );
-          if (suggestions.length > 0) {
-            const suggestion = suggestions[0];
-            const apply = await vscode6.window.showInformationMessage(
-              `Apply suggestion: ${suggestion.title}?`,
-              "Apply",
-              "Cancel"
-            );
-            if (apply === "Apply") {
-              await editor.edit((editBuilder) => {
-                editBuilder.replace(selection, suggestion.suggestedCode);
-              });
-              await apiClient2.applyFix(userId, suggestion.id, suggestion.suggestedCode);
-              vscode6.window.showInformationMessage("\u2705 Code fixed!");
-            }
-          }
-        } catch (error) {
-          vscode6.window.showErrorMessage(`Error: ${error}`);
-        }
-      }
-    );
-    const analyzeCodeCmd = vscode6.commands.registerCommand(
-      "aiCodeMentor.analyzeCode",
-      async () => {
-        const editor = vscode6.window.activeTextEditor;
-        if (!editor) {
-          vscode6.window.showErrorMessage("No active editor");
-          return;
-        }
-        vscode6.window.showInformationMessage("Analyzing code... \u26A1");
-        try {
-          const suggestions = await apiClient2.getSuggestions(
-            editor.document.getText(),
-            editor.document.languageId
-          );
-          if (suggestions.length > 0) {
-            await vscode6.commands.executeCommand("aiCodeMentor.openChat");
-            vscode6.window.showInformationMessage(
-              `Found ${suggestions.length} suggestions!`
-            );
-          } else {
-            vscode6.window.showInformationMessage("No suggestions found");
-          }
-        } catch (error) {
-          vscode6.window.showErrorMessage(`Error: ${error}`);
-        }
-      }
-    );
+    console.log("\u{1F4CB} Registering essential commands...");
     const openChatCmd = vscode6.commands.registerCommand(
       "aiCodeMentor.openChat",
       () => {
         try {
-          console.log("\u{1F537} Opening Chat Panel...");
-          console.log("Context URI:", context.extensionUri);
-          console.log("API Client:", apiClient2 ? "\u2705 ready" : "\u274C not ready");
-          console.log("Storage Service:", storageService ? "\u2705 ready" : "\u274C not ready");
-          ChatWebviewProvider.show(context.extensionUri, apiClient2, storageService);
-          console.log("\u2705 Chat Panel opened successfully");
+          console.log("\u{1F3A8} Opening Dashboard...");
+          DashboardWebviewProvider.show(context.extensionUri, apiClient2, storageService);
         } catch (error) {
-          console.error("\u274C Error opening chat:", error);
-          vscode6.window.showErrorMessage(`Failed to open chat: ${error}`);
+          console.error("\u274C Error opening dashboard:", error);
+          vscode6.window.showErrorMessage(`Failed to open dashboard: ${error}`);
         }
       }
     );
     const viewDashboardCmd = vscode6.commands.registerCommand(
       "aiCodeMentor.viewDashboard",
       () => {
+        console.log("\u{1F4CA} Viewing Dashboard...");
         DashboardWebviewProvider.show(context.extensionUri, apiClient2, storageService);
       }
     );
-    const testApiKeyCmd = vscode6.commands.registerCommand(
-      "aiCodeMentor.testApiKey",
-      async () => {
+    const analyzeFileCmd = vscode6.commands.registerCommand(
+      "debugxia.analyzeFile",
+      async (filePath) => {
         try {
-          console.log("\u{1F9EA} Testing API Key...");
-          vscode6.window.showInformationMessage("\u{1F9EA} Testing DEBUGXIA API Key... Check Debug Console for results");
-          const isValid = await aiAnalysisService.testApiKey();
-          if (isValid) {
-            vscode6.window.showInformationMessage("\u2705 API Key is VALID! DEBUGXIA is ready to analyze code.");
-            console.log("\u{1F389} API Key test PASSED!");
-          } else {
-            vscode6.window.showErrorMessage("\u274C API Key test FAILED. Check Debug Console for error details.");
-            console.error("\u274C API Key test failed - see console output above for details");
+          console.log("\u{1F4DD} analyzeFileCmd triggered with filePath:", filePath);
+          if (!filePath) {
+            const editor = vscode6.window.activeTextEditor;
+            if (!editor) {
+              vscode6.window.showErrorMessage("No active editor");
+              return;
+            }
+            filePath = editor.document.fileName;
           }
+          console.log("\u{1F50D} Analyzing file:", filePath);
+          vscode6.window.showInformationMessage(`Analyzing ${path3.basename(filePath)}... \u26A1`);
+          const uri = vscode6.Uri.file(filePath);
+          const fileContent = await vscode6.workspace.fs.readFile(uri);
+          const text = new TextDecoder().decode(fileContent);
+          const fileName = path3.basename(filePath);
+          const language = path3.extname(filePath).slice(1) || "text";
+          const lines = text.split("\n").length;
+          const functionCount = (text.match(/^(def|function|async function|class |interface |struct )/gm) || []).length;
+          const classCount = (text.match(/^class /gm) || []).length;
+          console.log("\u{1F916} Getting AI analysis...");
+          const aiAnalysis = await aiAnalysisService.analyzeCode(text, language, fileName);
+          console.log("\u2705 AI analysis complete:", {
+            errorScore: aiAnalysis.errorScore,
+            codeQualityScore: aiAnalysis.codeQualityScore,
+            optimizationScore: aiAnalysis.optimizationScore
+          });
+          const analysisData = {
+            fileName: filePath,
+            displayName: fileName,
+            language,
+            lines,
+            functions: functionCount,
+            classes: classCount,
+            // AI Analysis Results
+            errorScore: aiAnalysis.errorScore,
+            codeQualityScore: aiAnalysis.codeQualityScore,
+            optimizationScore: aiAnalysis.optimizationScore,
+            summary: aiAnalysis.summary,
+            issues: aiAnalysis.issues,
+            suggestions: aiAnalysis.suggestions,
+            timestamp: Date.now()
+          };
+          console.log("\u{1F4BE} Saving analysis");
+          await storageService.saveAnalysis(analysisData);
+          console.log("\u2705 Analysis saved");
+          console.log("\u{1F3A8} Opening dashboard...");
+          DashboardWebviewProvider.show(context.extensionUri, apiClient2, storageService);
+          await new Promise((r) => setTimeout(r, 500));
+          DashboardWebviewProvider.updatePanel();
+          vscode6.window.showInformationMessage(`\u2705 Analysis complete for ${fileName}`);
+          console.log("\u2705 Analyze complete");
         } catch (error) {
-          console.error("\u274C Error testing API key:", error);
-          vscode6.window.showErrorMessage(`Error testing API key: ${error}`);
+          console.error("\u274C Error analyzing file:", error);
+          vscode6.window.showErrorMessage(`Error: ${error}`);
         }
       }
     );
-    context.subscriptions.push(
-      openPanelCmd,
-      explainErrorCmd,
-      fixCodeCmd,
-      analyzeCodeCmd,
-      openChatCmd,
-      viewDashboardCmd,
-      testApiKeyCmd
-    );
+    context.subscriptions.push(openChatCmd, viewDashboardCmd, analyzeFileCmd);
+    console.log("\u2705 Essential commands registered");
   } catch (error) {
     console.error("\u274C Error registering commands:", error);
     vscode6.window.showErrorMessage(`Failed to register commands: ${error}`);
-  }
-}
-function showExplanationPanel(explanation) {
-  const panel = vscode6.window.createWebviewPanel(
-    "errorExplanation",
-    "AI Error Explanation",
-    vscode6.ViewColumn.Beside,
-    { enableScripts: true }
-  );
-  panel.webview.html = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <style>
-        body { 
-          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto; 
-          padding: 20px;
-          background: #1e1e1e;
-          color: #e0e0e0;
-        }
-        h2 { color: #00d4ff; margin-top: 0; }
-        h3 { color: #00ffff; }
-        code { 
-          background: #2d2d2d; 
-          padding: 2px 6px; 
-          border-radius: 3px;
-          color: #ce9178;
-        }
-        pre {
-          background: #2d2d2d;
-          padding: 12px;
-          border-radius: 6px;
-          overflow-x: auto;
-          border-left: 3px solid #00d4ff;
-        }
-        .tip { 
-          background: rgba(0, 212, 255, 0.1); 
-          border-left: 3px solid #00d4ff;
-          padding: 12px;
-          margin: 10px 0;
-          border-radius: 4px;
-        }
-        button {
-          background: #00d4ff;
-          color: #000;
-          border: none;
-          padding: 8px 16px;
-          border-radius: 4px;
-          cursor: pointer;
-          font-weight: 600;
-          margin-top: 10px;
-        }
-        button:hover {
-          background: #00ffff;
-        }
-      </style>
-    </head>
-    <body>
-      <h2>\u{1F916} ${explanation.errorType}</h2>
-      <div>
-        <h3>Explanation</h3>
-        <p>${explanation.explanation}</p>
-      </div>
-      <div>
-        <h3>Why This Happened?</h3>
-        <p>${explanation.why}</p>
-      </div>
-      <div>
-        <h3>Solution</h3>
-        <p>${explanation.solution}</p>
-      </div>
-      <div>
-        <h3>Example Code</h3>
-        <pre><code>${explanation.exampleCode}</code></pre>
-      </div>
-      <div>
-        <h3>\u{1F4A1} Tips</h3>
-        ${explanation.tips.map((tip) => `<div class="tip">${tip}</div>`).join("")}
-      </div>
-    </body>
-    </html>
-  `;
-}
-function watchEditorAndTerminal(context) {
-  const config = getExtensionConfig();
-  if (config.enableAutoAnalysis) {
-    const onSave = vscode6.workspace.onDidSaveTextDocument(async (document2) => {
-      const errors = await errorDetector.analyzeDocument(document2);
-      const aiAnalysis = await aiAnalysisService.analyzeCode(
-        document2.getText(),
-        document2.languageId,
-        document2.fileName
-      );
-      await storageService.saveAnalysis({
-        fileName: document2.fileName,
-        language: document2.languageId,
-        errorScore: aiAnalysis.errorScore,
-        codeQualityScore: aiAnalysis.codeQualityScore,
-        optimizationScore: aiAnalysis.optimizationScore,
-        summary: aiAnalysis.summary,
-        issues: aiAnalysis.issues,
-        suggestions: aiAnalysis.suggestions,
-        errorCount: errors.length
-      });
-      if (errors.length > 0) {
-        errorDetector.highlightErrors(document2, errors);
-        const userId = storageService.getUserId();
-        errors.forEach((error) => {
-          apiClient.logError(userId, {
-            language: error.language,
-            errorType: error.errorType,
-            errorMessage: error.errorMessage,
-            severity: error.severity,
-            file: error.file,
-            line: error.line
-          });
-        });
-      }
-    });
-    context.subscriptions.push(onSave);
-  }
-  if (config.enableTerminalAnalysis) {
-    const terminals = vscode6.window.terminals;
-    terminals.forEach((terminal) => {
-      console.log("Terminal available:", terminal.name);
-    });
-  }
-}
-function initializeScannerTerminal(context) {
-  try {
-    scannerTerminal = vscode6.window.createTerminal({
-      name: "\u{1F50D} DEBUGXIA Scanner",
-      hideFromUser: true,
-      shellPath: void 0
-    });
-    scannerTerminal.sendText(SCANNER_ACTIVE);
-    scannerTerminal.sendText("Starting error scan...");
-    const workspaceFolder = vscode6.workspace.workspaceFolders?.[0];
-    if (workspaceFolder) {
-      const projectPath = workspaceFolder.uri.fsPath;
-      scannerTerminal.sendText(`set DEBUGXIA_API_URL=http://localhost:3000`);
-      scannerTerminal.sendText(`cd "${projectPath}"`);
-      scannerTerminal.sendText(`node dist/services/terminalScanner.js`);
-    }
-    vscode6.window.onDidCloseTerminal((terminal) => {
-      if (terminal === scannerTerminal) {
-        scannerTerminal = void 0;
-        vscode6.window.showInformationMessage("DEBUGXIA Scanner terminal closed");
-      }
-    });
-    vscode6.window.showInformationMessage("\u{1F680} DEBUGXIA Scanner initialized!");
-  } catch (error) {
-    vscode6.window.showErrorMessage(`Failed to initialize scanner: ${error}`);
   }
 }
 function deactivate() {
