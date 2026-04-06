@@ -11,6 +11,7 @@ export class DashboardWebviewProvider implements vscode.WebviewPanelSerializer {
   private static currentPanel: vscode.WebviewPanel | undefined;
   private static provider: DashboardWebviewProvider | undefined;
   private discoveredFiles: vscode.Uri[] = [];
+  private selectedFileIndex: number = -1; // Track currently selected file in dropdown
 
   constructor(
     private extensionUri: vscode.Uri,
@@ -76,6 +77,8 @@ export class DashboardWebviewProvider implements vscode.WebviewPanelSerializer {
       DashboardWebviewProvider.currentPanel.reveal(vscode.ViewColumn.Beside);
       // Refresh the panel with latest data
       if (DashboardWebviewProvider.provider) {
+        // Reset selection to show latest file when showing panel
+        DashboardWebviewProvider.provider.selectedFileIndex = -1;
         DashboardWebviewProvider.provider.update();
       }
     } else {
@@ -174,7 +177,13 @@ export class DashboardWebviewProvider implements vscode.WebviewPanelSerializer {
     
     // Calculate AI-driven statistics ONLY if there's analysis
     const stats = hasAnalysis ? this.calculateAIStats(analysisHistory, errorHistory) : null;
-    const currentFile = hasAnalysis ? analysisHistory[analysisHistory.length - 1] : null;
+    
+    // Use selected file index if set, otherwise use last file
+    const fileIndex = this.selectedFileIndex >= 0 && this.selectedFileIndex < analysisHistory.length 
+      ? this.selectedFileIndex 
+      : analysisHistory.length - 1;
+    
+    const currentFile = hasAnalysis ? analysisHistory[fileIndex] : null;
     
     // Generate file list - show only analyzed error files
     let fileListHtml = "";
@@ -184,7 +193,8 @@ export class DashboardWebviewProvider implements vscode.WebviewPanelSerializer {
       fileListHtml = analysisHistory.map((f, idx) => {
         const fileName = f.fileName ? f.fileName.split('\\').pop().split('/').pop() : `File ${idx + 1}`;
         const errorIcon = f.errorScore > 0 ? '⚠️' : '✓';
-        return `<option value="analyzed-${idx}">${errorIcon} ${fileName}</option>`;
+        const isSelected = idx === fileIndex ? 'selected' : '';
+        return `<option value="analyzed-${idx}" ${isSelected}>${errorIcon} ${fileName}</option>`;
       }).join("");
     }
 
@@ -222,18 +232,54 @@ export class DashboardWebviewProvider implements vscode.WebviewPanelSerializer {
                 <div class="section-icon">📝</div>
                 <div class="section-title">Analysis Summary</div>
               </div>
-              <div class="section-text">${currentFile.summary || "No analysis available"}</div>
+              <div class="section-text">${
+                (() => {
+                  let summary = currentFile.summary || "No analysis available";
+                  // Show only first sentence (max 120 chars)
+                  const firstSentence = summary.split(/[.!?]/)[0];
+                  return firstSentence.substring(0, 120) + (firstSentence.length > 120 ? '...' : '.');
+                })()
+              }</div>
             </div>
 
             <!-- Issues Found -->
             <div class="issues-section">
               <div class="issues-header">
                 <div class="section-icon">⚠️</div>
-                <div class="issues-title">Issues Found (${errorHistory.length})</div>
+                <div class="issues-title">Issues Found (${currentFile.issues ? currentFile.issues.length : 0})</div>
               </div>
               <div class="issues-list">${
-                errorHistory.length > 0 
-                  ? errorHistory.map(e => `<div class="issue-item">• ${e.message || e.type || "Unknown issue"}</div>`).join("")
+                currentFile.issues && currentFile.issues.length > 0
+                  ? currentFile.issues.slice(0, 3).map((issue, idx) => {
+                      let lineNum = '';
+                      let issueText = '';
+                      let fixText = '';
+                      
+                      // Handle object format with line, issue, fix
+                      if (typeof issue === 'object' && issue !== null) {
+                        lineNum = issue.line ? ` Line ${issue.line}` : '';
+                        issueText = issue.issue || issue.message || '';
+                        fixText = issue.fix ? ` → ${issue.fix}` : '';
+                      } else if (typeof issue === 'string') {
+                        // Parse string format like "Line X: description"
+                        const lineMatch = issue.match(/Line\s+(\d+)/i);
+                        lineNum = lineMatch ? ` Line ${lineMatch[1]}` : '';
+                        issueText = issue.replace(/Line\s+\d+[\s:]*/i, '').trim();
+                      } else {
+                        issueText = String(issue);
+                      }
+                      
+                      // Truncate text if too long
+                      const maxLen = 80;
+                      if (issueText.length > maxLen) {
+                        issueText = issueText.substring(0, maxLen) + '...';
+                      }
+                      
+                      return '<div class="issue-item">' + 
+                        (lineNum ? '<span style="color: #60a5fa; font-weight: 600;">' + lineNum + ':</span> ' : '') + 
+                        issueText + 
+                        '</div>';
+                    }).join("") + (currentFile.issues.length > 3 ? `<div class="issue-item" style="color: #999; padding-top: 8px;">+ ${currentFile.issues.length - 3} more issue${currentFile.issues.length > 4 ? 's' : ''}</div>` : '')
                   : "<div class=\"issue-item\">No issues found in this file</div>"
               }</div>
             </div>
@@ -420,6 +466,33 @@ export class DashboardWebviewProvider implements vscode.WebviewPanelSerializer {
             transform: scale(0.95);
           }
 
+          .refresh-btn {
+            background-color: transparent;
+            border: 2px solid #6B7280;
+            border-radius: 6px;
+            padding: 6px 10px;
+            cursor: pointer;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            transition: all 0.2s ease;
+            min-width: 40px;
+            min-height: 40px;
+          }
+
+          .refresh-btn:hover {
+            background-color: rgba(59, 130, 246, 0.2);
+            border-color: #3b82f6;
+            transform: rotate(180deg);
+          }
+
+          .refresh-btn:active {
+            background-color: rgba(59, 130, 246, 0.3);
+            transform: rotate(180deg) scale(0.95);
+          }
+
           .file-info-card {
             background-color: #0f0f0f;
             border: 2px solid #6B7280;
@@ -533,6 +606,13 @@ export class DashboardWebviewProvider implements vscode.WebviewPanelSerializer {
             font-size: 14px;
             color: #9CA3AF;
             letter-spacing: 0.3px;
+            line-height: 1.5;
+            max-height: 60px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
           }
 
           .issues-section {
@@ -628,6 +708,13 @@ export class DashboardWebviewProvider implements vscode.WebviewPanelSerializer {
             color: #D1D5DB;
             padding: 6px 0;
             letter-spacing: 0.3px;
+            line-height: 1.4;
+            max-height: 40px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-line-clamp: 1;
+            -webkit-box-orient: vertical;
           }
 
           .empty-state {
@@ -669,7 +756,9 @@ export class DashboardWebviewProvider implements vscode.WebviewPanelSerializer {
           <!-- Header -->
           <div class="header">
             <div class="logo-text">DEBUGXIA</div>
-            <div class="issue-badge">${errorHistory.length} issue${errorHistory.length !== 1 ? 's' : ''}</div>
+            <div style="display: flex; gap: 12px; align-items: center;">
+              <div class="issue-badge">${hasAnalysis && currentFile && currentFile.issues ? currentFile.issues.length : 0} issue${(hasAnalysis && currentFile && currentFile.issues ? currentFile.issues.length : 0) !== 1 ? 's' : ''}</div>
+            </div>
           </div>
 
           <!-- File Selector -->
@@ -686,7 +775,6 @@ export class DashboardWebviewProvider implements vscode.WebviewPanelSerializer {
               <span>🔍</span>
               <span>Browse</span>
             </button>
-            <button class="trash-btn" onclick="clearAnalysis()">🗑️</button>
           </div>
 
           ${fileInfoContent}
@@ -701,8 +789,10 @@ export class DashboardWebviewProvider implements vscode.WebviewPanelSerializer {
             console.log('✅ VS Code API acquired successfully');
           } catch (error) {
             console.error('❌ Failed to acquire VS Code API:', error);
+            vscode = null;
           }
 
+          // Refresh dashboard
           // Attach file select dropdown handler immediately (not waiting for DOMContentLoaded)
           function attachFileSelectListener() {
             const fileSelect = document.querySelector('.file-select');
@@ -780,19 +870,6 @@ export class DashboardWebviewProvider implements vscode.WebviewPanelSerializer {
           }
 
           // Clear analysis - delete all history
-          function clearAnalysis() {
-            console.log('🗑️ clearAnalysis() called');
-            const confirmed = confirm('🗑️ Delete all analysis? This cannot be undone.');
-            if (confirmed) {
-              console.log('✅ User confirmed - sending clear-analysis command');
-              vscode.postMessage({
-                command: 'clear-analysis'
-              });
-            } else {
-              console.log('❌ User cancelled delete');
-            }
-          }
-
           // Handle message from extension
           window.addEventListener('message', event => {
             const message = event.data;
@@ -855,6 +932,9 @@ export class DashboardWebviewProvider implements vscode.WebviewPanelSerializer {
         try {
           const result = await vscode.commands.executeCommand('debugxia.analyzeFile', message.filePath);
           console.log('✅ analyze-new-file: Analysis executed, result:', result);
+          
+          // Reset selectedFileIndex to show the newly analyzed file
+          this.selectedFileIndex = -1;
         } catch (error) {
           console.error('❌ analyze-new-file: Error analyzing file:', error);
           vscode.window.showErrorMessage(`Error analyzing file: ${error}`);
@@ -886,6 +966,9 @@ export class DashboardWebviewProvider implements vscode.WebviewPanelSerializer {
             console.log('📝 browse-files: Executing analyzeFile command with:', selectedFile);
             const result = await vscode.commands.executeCommand('debugxia.analyzeFile', selectedFile);
             console.log('✅ browse-files: analyzeFile executed, result:', result);
+            
+            // Reset selectedFileIndex to show the newly analyzed file
+            this.selectedFileIndex = -1;
           } else {
             console.log('❌ browse-files: No file selected by user');
           }
@@ -900,8 +983,14 @@ export class DashboardWebviewProvider implements vscode.WebviewPanelSerializer {
         const analysisHistory = this.storageService.getAnalysisHistory();
         if (message.fileIndex >= 0 && message.fileIndex < analysisHistory.length) {
           const selectedFile = analysisHistory[message.fileIndex];
-          console.log('Selected file:', selectedFile.fileName);
-          // You can emit an event or store the selection here
+          console.log('📁 Selected file:', selectedFile.fileName);
+          
+          // Store the selected file index
+          this.selectedFileIndex = message.fileIndex;
+          console.log('✅ selectedFileIndex set to:', this.selectedFileIndex);
+          
+          // Update panel to show selected file's data
+          await this.update();
         }
         break;
 
@@ -921,23 +1010,43 @@ export class DashboardWebviewProvider implements vscode.WebviewPanelSerializer {
         break;
 
       case 'clear-analysis':
-        console.log('🗑️ clear-analysis: Clearing analysis history');
+        console.log('🗑️ clear-analysis: Starting deletion...');
         try {
+          console.log('📝 Before clear - Analysis count:', this.storageService.getAnalysisHistory().length);
+          
           await this.storageService.clearAnalysisHistory();
           await this.storageService.clearErrorHistory();
           console.log('✅ clear-analysis: Storage cleared');
+          console.log('📝 After clear - Analysis count:', this.storageService.getAnalysisHistory().length);
+          
+          // Reset selectedFileIndex
+          this.selectedFileIndex = -1;
           
           // Small delay to ensure storage is updated
           await new Promise(r => setTimeout(r, 100));
           
-          // Refresh dashboard
+          // Refresh dashboard HTML
+          console.log('🔄 Updating dashboard view...');
           await this.update();
-          console.log('✅ clear-analysis: Dashboard refreshed');
+          console.log('✅ clear-analysis: Dashboard updated successfully');
           
-          vscode.window.showInformationMessage('✅ All analysis cleared');
+          vscode.window.showInformationMessage('✅ All analyzed files deleted');
         } catch (error) {
           console.error('❌ clear-analysis: Error:', error);
           vscode.window.showErrorMessage(`Error clearing analysis: ${error}`);
+        }
+        break;
+
+      case 'refresh-dashboard':
+        console.log('🔄 refresh-dashboard: Refreshing dashboard');
+        try {
+          // Reset selectedFileIndex to show latest file
+          this.selectedFileIndex = -1;
+          await this.update();
+          console.log('✅ refresh-dashboard: Dashboard refreshed');
+        } catch (error) {
+          console.error('❌ refresh-dashboard: Error:', error);
+          vscode.window.showErrorMessage(`Error refreshing: ${error}`);
         }
         break;
 

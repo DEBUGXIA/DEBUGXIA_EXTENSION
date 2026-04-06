@@ -28,12 +28,35 @@ export class ErrorScanner {
   ) {}
 
   /**
-   * Get all Python files from workspace
+   * Get all Python files from current workspace ONLY
    */
   private async getPythonFiles(): Promise<vscode.Uri[]> {
     try {
-      console.log('🔍 Searching for Python files...');
+      console.log('🔍 Searching for Python files in workspace...');
+      
+      // Check if workspace is open
+      if (!vscode.workspace.workspaceFolders || vscode.workspace.workspaceFolders.length === 0) {
+        console.warn('⚠️ No workspace folder is open');
+        vscode.window.showErrorMessage('❌ No workspace folder open! Please open a folder first.');
+        return [];
+      }
+
+      const workspacePath = vscode.workspace.workspaceFolders[0].uri.fsPath;
+      console.log('📁 Workspace path:', workspacePath);
+
+      // Search ONLY within the workspace folder
       const pythonFiles = await vscode.workspace.findFiles('**/*.py', '**/node_modules/**', 100);
+      
+      // Double-check: only include files that are inside the workspace folder
+      const workspaceFiles = pythonFiles.filter(file => {
+        const isInWorkspace = file.fsPath.startsWith(workspacePath);
+        if (!isInWorkspace) {
+          console.log(`⚠️ Skipping file outside workspace: ${file.fsPath}`);
+        }
+        return isInWorkspace;
+      });
+
+      console.log(`📊 Found ${pythonFiles.length} Python files, ${workspaceFiles.length} in workspace`);
       
       // Filter out test files and temporary files
       const excludePatterns = [
@@ -50,12 +73,12 @@ export class ErrorScanner {
         /\btest\b/i,                // any file with 'test' in name
       ];
       
-      const filteredFiles = pythonFiles.filter(file => {
+      const filteredFiles = workspaceFiles.filter(file => {
         const fileName = file.fsPath.split('\\').pop()?.split('/').pop() || '';
         return !excludePatterns.some(pattern => pattern.test(fileName));
       });
       
-      console.log(`✅ Found ${pythonFiles.length} Python files, ${filteredFiles.length} to scan`);
+      console.log(`✅ Filtered to ${filteredFiles.length} production files for scanning`);
       return filteredFiles;
     } catch (error) {
       console.error('❌ Error getting Python files:', error);

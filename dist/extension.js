@@ -16209,11 +16209,28 @@ SCORING RULES:
 
 CRITICAL RESPONSE RULES:
 1. ALWAYS respond with ONLY valid JSON - NO explanations, NO markdown, NO comments
-2. Follow the exact structure provided
+2. Follow the exact structure provided with line numbers and fixes
 3. Distinguish ERRORS (code is broken) from IMPROVEMENTS (style, performance)
 4. Categorize issues by severity: CRITICAL (breaks code), HIGH (major), MEDIUM, LOW
 5. Include line numbers for ALL issues
 6. Provide actionable fixes for each issue
+
+Return JSON with issues as objects:
+{
+  "errorScore": <0-100>,
+  "codeQualityScore": <0-100>,
+  "optimizationScore": <0-100>,
+  "summary": "<summary>",
+  "issues": [
+    {
+      "line": <line number>,
+      "type": "<CRITICAL|HIGH|MEDIUM|LOW>",
+      "issue": "<short description>",
+      "fix": "<short fix>"
+    }
+  ],
+  "suggestions": []
+}
 
 Your response must be parseable valid JSON.`
           },
@@ -16281,7 +16298,14 @@ Your response must be parseable valid JSON.`
   "codeQualityScore": <0-100 based on design, readability, maintainability>,
   "optimizationScore": <0-100 based on performance potential>,
   "summary": "<executive summary>",
-  "issues": ["<issue1>", "<issue2>"],
+  "issues": [
+    {
+      "line": <line number>,
+      "type": "<CRITICAL|HIGH|MEDIUM|LOW>",
+      "issue": "<short problem description>",
+      "fix": "<short fix description>"
+    }
+  ],
   "suggestions": ["<suggestion1>", "<suggestion2>"]
 }
 
@@ -17823,11 +17847,13 @@ var ChatWebviewProvider = class _ChatWebviewProvider {
 // src/webviews/dashboardWebviewProvider.ts
 var vscode5 = __toESM(require("vscode"));
 var DashboardWebviewProvider = class _DashboardWebviewProvider {
+  // Track currently selected file in dropdown
   constructor(extensionUri, apiClient2, storageService2) {
     this.extensionUri = extensionUri;
     this.apiClient = apiClient2;
     this.storageService = storageService2;
     this.discoveredFiles = [];
+    this.selectedFileIndex = -1;
   }
   /**
    * Discover Python files in the workspace
@@ -17886,6 +17912,7 @@ var DashboardWebviewProvider = class _DashboardWebviewProvider {
     if (_DashboardWebviewProvider.currentPanel) {
       _DashboardWebviewProvider.currentPanel.reveal(vscode5.ViewColumn.Beside);
       if (_DashboardWebviewProvider.provider) {
+        _DashboardWebviewProvider.provider.selectedFileIndex = -1;
         _DashboardWebviewProvider.provider.update();
       }
     } else {
@@ -17970,13 +17997,15 @@ var DashboardWebviewProvider = class _DashboardWebviewProvider {
     });
     const hasAnalysis = analysisHistory && analysisHistory.length > 0;
     const stats = hasAnalysis ? this.calculateAIStats(analysisHistory, errorHistory) : null;
-    const currentFile = hasAnalysis ? analysisHistory[analysisHistory.length - 1] : null;
+    const fileIndex = this.selectedFileIndex >= 0 && this.selectedFileIndex < analysisHistory.length ? this.selectedFileIndex : analysisHistory.length - 1;
+    const currentFile = hasAnalysis ? analysisHistory[fileIndex] : null;
     let fileListHtml = "";
     if (hasAnalysis) {
       fileListHtml = analysisHistory.map((f, idx) => {
         const fileName = f.fileName ? f.fileName.split("\\").pop().split("/").pop() : `File ${idx + 1}`;
         const errorIcon = f.errorScore > 0 ? "\u26A0\uFE0F" : "\u2713";
-        return `<option value="analyzed-${idx}">${errorIcon} ${fileName}</option>`;
+        const isSelected = idx === fileIndex ? "selected" : "";
+        return `<option value="analyzed-${idx}" ${isSelected}>${errorIcon} ${fileName}</option>`;
       }).join("");
     }
     const fileInfoContent = hasAnalysis && currentFile ? `
@@ -18012,16 +18041,40 @@ var DashboardWebviewProvider = class _DashboardWebviewProvider {
                 <div class="section-icon">\u{1F4DD}</div>
                 <div class="section-title">Analysis Summary</div>
               </div>
-              <div class="section-text">${currentFile.summary || "No analysis available"}</div>
+              <div class="section-text">${(() => {
+      let summary = currentFile.summary || "No analysis available";
+      const firstSentence = summary.split(/[.!?]/)[0];
+      return firstSentence.substring(0, 120) + (firstSentence.length > 120 ? "..." : ".");
+    })()}</div>
             </div>
 
             <!-- Issues Found -->
             <div class="issues-section">
               <div class="issues-header">
                 <div class="section-icon">\u26A0\uFE0F</div>
-                <div class="issues-title">Issues Found (${errorHistory.length})</div>
+                <div class="issues-title">Issues Found (${currentFile.issues ? currentFile.issues.length : 0})</div>
               </div>
-              <div class="issues-list">${errorHistory.length > 0 ? errorHistory.map((e) => `<div class="issue-item">\u2022 ${e.message || e.type || "Unknown issue"}</div>`).join("") : '<div class="issue-item">No issues found in this file</div>'}</div>
+              <div class="issues-list">${currentFile.issues && currentFile.issues.length > 0 ? currentFile.issues.slice(0, 3).map((issue, idx) => {
+      let lineNum = "";
+      let issueText = "";
+      let fixText = "";
+      if (typeof issue === "object" && issue !== null) {
+        lineNum = issue.line ? ` Line ${issue.line}` : "";
+        issueText = issue.issue || issue.message || "";
+        fixText = issue.fix ? ` \u2192 ${issue.fix}` : "";
+      } else if (typeof issue === "string") {
+        const lineMatch = issue.match(/Line\s+(\d+)/i);
+        lineNum = lineMatch ? ` Line ${lineMatch[1]}` : "";
+        issueText = issue.replace(/Line\s+\d+[\s:]*/i, "").trim();
+      } else {
+        issueText = String(issue);
+      }
+      const maxLen = 80;
+      if (issueText.length > maxLen) {
+        issueText = issueText.substring(0, maxLen) + "...";
+      }
+      return '<div class="issue-item">' + (lineNum ? '<span style="color: #60a5fa; font-weight: 600;">' + lineNum + ":</span> " : "") + issueText + "</div>";
+    }).join("") + (currentFile.issues.length > 3 ? `<div class="issue-item" style="color: #999; padding-top: 8px;">+ ${currentFile.issues.length - 3} more issue${currentFile.issues.length > 4 ? "s" : ""}</div>` : "") : '<div class="issue-item">No issues found in this file</div>'}</div>
             </div>
 
             <!-- Action Buttons -->
@@ -18205,6 +18258,33 @@ var DashboardWebviewProvider = class _DashboardWebviewProvider {
             transform: scale(0.95);
           }
 
+          .refresh-btn {
+            background-color: transparent;
+            border: 2px solid #6B7280;
+            border-radius: 6px;
+            padding: 6px 10px;
+            cursor: pointer;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            transition: all 0.2s ease;
+            min-width: 40px;
+            min-height: 40px;
+          }
+
+          .refresh-btn:hover {
+            background-color: rgba(59, 130, 246, 0.2);
+            border-color: #3b82f6;
+            transform: rotate(180deg);
+          }
+
+          .refresh-btn:active {
+            background-color: rgba(59, 130, 246, 0.3);
+            transform: rotate(180deg) scale(0.95);
+          }
+
           .file-info-card {
             background-color: #0f0f0f;
             border: 2px solid #6B7280;
@@ -18318,6 +18398,13 @@ var DashboardWebviewProvider = class _DashboardWebviewProvider {
             font-size: 14px;
             color: #9CA3AF;
             letter-spacing: 0.3px;
+            line-height: 1.5;
+            max-height: 60px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
           }
 
           .issues-section {
@@ -18413,6 +18500,13 @@ var DashboardWebviewProvider = class _DashboardWebviewProvider {
             color: #D1D5DB;
             padding: 6px 0;
             letter-spacing: 0.3px;
+            line-height: 1.4;
+            max-height: 40px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-line-clamp: 1;
+            -webkit-box-orient: vertical;
           }
 
           .empty-state {
@@ -18454,7 +18548,9 @@ var DashboardWebviewProvider = class _DashboardWebviewProvider {
           <!-- Header -->
           <div class="header">
             <div class="logo-text">DEBUGXIA</div>
-            <div class="issue-badge">${errorHistory.length} issue${errorHistory.length !== 1 ? "s" : ""}</div>
+            <div style="display: flex; gap: 12px; align-items: center;">
+              <div class="issue-badge">${hasAnalysis && currentFile && currentFile.issues ? currentFile.issues.length : 0} issue${(hasAnalysis && currentFile && currentFile.issues ? currentFile.issues.length : 0) !== 1 ? "s" : ""}</div>
+            </div>
           </div>
 
           <!-- File Selector -->
@@ -18471,7 +18567,6 @@ var DashboardWebviewProvider = class _DashboardWebviewProvider {
               <span>\u{1F50D}</span>
               <span>Browse</span>
             </button>
-            <button class="trash-btn" onclick="clearAnalysis()">\u{1F5D1}\uFE0F</button>
           </div>
 
           ${fileInfoContent}
@@ -18486,8 +18581,10 @@ var DashboardWebviewProvider = class _DashboardWebviewProvider {
             console.log('\u2705 VS Code API acquired successfully');
           } catch (error) {
             console.error('\u274C Failed to acquire VS Code API:', error);
+            vscode = null;
           }
 
+          // Refresh dashboard
           // Attach file select dropdown handler immediately (not waiting for DOMContentLoaded)
           function attachFileSelectListener() {
             const fileSelect = document.querySelector('.file-select');
@@ -18565,19 +18662,6 @@ var DashboardWebviewProvider = class _DashboardWebviewProvider {
           }
 
           // Clear analysis - delete all history
-          function clearAnalysis() {
-            console.log('\u{1F5D1}\uFE0F clearAnalysis() called');
-            const confirmed = confirm('\u{1F5D1}\uFE0F Delete all analysis? This cannot be undone.');
-            if (confirmed) {
-              console.log('\u2705 User confirmed - sending clear-analysis command');
-              vscode.postMessage({
-                command: 'clear-analysis'
-              });
-            } else {
-              console.log('\u274C User cancelled delete');
-            }
-          }
-
           // Handle message from extension
           window.addEventListener('message', event => {
             const message = event.data;
@@ -18625,6 +18709,7 @@ var DashboardWebviewProvider = class _DashboardWebviewProvider {
         try {
           const result = await vscode5.commands.executeCommand("debugxia.analyzeFile", message.filePath);
           console.log("\u2705 analyze-new-file: Analysis executed, result:", result);
+          this.selectedFileIndex = -1;
         } catch (error) {
           console.error("\u274C analyze-new-file: Error analyzing file:", error);
           vscode5.window.showErrorMessage(`Error analyzing file: ${error}`);
@@ -18650,6 +18735,7 @@ var DashboardWebviewProvider = class _DashboardWebviewProvider {
             console.log("\u{1F4DD} browse-files: Executing analyzeFile command with:", selectedFile);
             const result = await vscode5.commands.executeCommand("debugxia.analyzeFile", selectedFile);
             console.log("\u2705 browse-files: analyzeFile executed, result:", result);
+            this.selectedFileIndex = -1;
           } else {
             console.log("\u274C browse-files: No file selected by user");
           }
@@ -18662,7 +18748,10 @@ var DashboardWebviewProvider = class _DashboardWebviewProvider {
         const analysisHistory = this.storageService.getAnalysisHistory();
         if (message.fileIndex >= 0 && message.fileIndex < analysisHistory.length) {
           const selectedFile = analysisHistory[message.fileIndex];
-          console.log("Selected file:", selectedFile.fileName);
+          console.log("\u{1F4C1} Selected file:", selectedFile.fileName);
+          this.selectedFileIndex = message.fileIndex;
+          console.log("\u2705 selectedFileIndex set to:", this.selectedFileIndex);
+          await this.update();
         }
         break;
       case "fix-error":
@@ -18678,18 +18767,33 @@ var DashboardWebviewProvider = class _DashboardWebviewProvider {
         vscode5.window.showInformationMessage("Opening terminal...");
         break;
       case "clear-analysis":
-        console.log("\u{1F5D1}\uFE0F clear-analysis: Clearing analysis history");
+        console.log("\u{1F5D1}\uFE0F clear-analysis: Starting deletion...");
         try {
+          console.log("\u{1F4DD} Before clear - Analysis count:", this.storageService.getAnalysisHistory().length);
           await this.storageService.clearAnalysisHistory();
           await this.storageService.clearErrorHistory();
           console.log("\u2705 clear-analysis: Storage cleared");
+          console.log("\u{1F4DD} After clear - Analysis count:", this.storageService.getAnalysisHistory().length);
+          this.selectedFileIndex = -1;
           await new Promise((r) => setTimeout(r, 100));
+          console.log("\u{1F504} Updating dashboard view...");
           await this.update();
-          console.log("\u2705 clear-analysis: Dashboard refreshed");
-          vscode5.window.showInformationMessage("\u2705 All analysis cleared");
+          console.log("\u2705 clear-analysis: Dashboard updated successfully");
+          vscode5.window.showInformationMessage("\u2705 All analyzed files deleted");
         } catch (error) {
           console.error("\u274C clear-analysis: Error:", error);
           vscode5.window.showErrorMessage(`Error clearing analysis: ${error}`);
+        }
+        break;
+      case "refresh-dashboard":
+        console.log("\u{1F504} refresh-dashboard: Refreshing dashboard");
+        try {
+          this.selectedFileIndex = -1;
+          await this.update();
+          console.log("\u2705 refresh-dashboard: Dashboard refreshed");
+        } catch (error) {
+          console.error("\u274C refresh-dashboard: Error:", error);
+          vscode5.window.showErrorMessage(`Error refreshing: ${error}`);
         }
         break;
       default:
@@ -18701,17 +18805,19 @@ var DashboardWebviewProvider = class _DashboardWebviewProvider {
 // src/services/storageService.ts
 var StorageService = class {
   constructor(context) {
+    this.storageKey = "aiCodeMentor";
     this.context = context;
     this.userId = this.loadOrCreateUserId();
+    console.log("\u2705 StorageService initialized with workspaceState (SESSION-BASED - clears on close)");
   }
   /**
-   * Load or create user ID
+   * Load or create user ID (stored in globalState for persistence)
    */
   loadOrCreateUserId() {
-    let userId = this.context.globalState.get("aiCodeMentor.userId");
+    let userId = this.context.globalState.get(`${this.storageKey}.userId`);
     if (!userId) {
       userId = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      this.context.globalState.update("aiCodeMentor.userId", userId);
+      this.context.globalState.update(`${this.storageKey}.userId`, userId);
     }
     return userId;
   }
@@ -18722,16 +18828,21 @@ var StorageService = class {
     return this.userId;
   }
   /**
-   * Save setting
+   * Save setting to session storage (cleared on close)
    */
   async saveSetting(key, value) {
-    await this.context.globalState.update(`aiCodeMentor.${key}`, value);
+    const fullKey = `${this.storageKey}.${key}`;
+    console.log(`\u{1F4BE} Saving to workspaceState (SESSION): ${fullKey}`);
+    await this.context.workspaceState.update(fullKey, value);
   }
   /**
-   * Get setting
+   * Get setting from session storage
    */
   getSetting(key, defaultValue) {
-    return this.context.globalState.get(`aiCodeMentor.${key}`, defaultValue);
+    const fullKey = `${this.storageKey}.${key}`;
+    const value = this.context.workspaceState.get(fullKey, defaultValue);
+    console.log(`\u{1F4D6} Retrieved from workspaceState (SESSION): ${fullKey}, found: ${value ? "YES" : "NO"}`);
+    return value;
   }
   /**
    * Save API key securely
@@ -18746,43 +18857,53 @@ var StorageService = class {
     return await this.context.secrets.get("aiCodeMentor.apiKey");
   }
   /**
-   * Save error history with AI analysis
+   * Save error history with AI analysis - SESSION based
    */
   async saveError(errorData) {
-    const errors = this.getSetting("errorHistory", []);
+    const errors = this.getSetting("errorHistory", []) || [];
     errors.push({ ...errorData, timestamp: Date.now() });
-    await this.saveSetting("errorHistory", errors.slice(-100));
+    const trimmed = errors.slice(-100);
+    console.log(`\u{1F4DD} Saved error #${errors.length} to session storage`);
+    await this.saveSetting("errorHistory", trimmed);
   }
   /**
-   * Save AI analysis results for statistics
+   * Save AI analysis results for statistics - SESSION based
    */
   async saveAnalysis(analysisData) {
-    const analyses = this.getSetting("analysisHistory", []);
+    const analyses = this.getSetting("analysisHistory", []) || [];
     analyses.push({ ...analysisData, timestamp: Date.now() });
-    await this.saveSetting("analysisHistory", analyses.slice(-50));
+    const trimmed = analyses.slice(-50);
+    console.log(`\u{1F4CA} Saved analysis #${analyses.length} to session storage: ${analysisData.displayName}`);
+    await this.saveSetting("analysisHistory", trimmed);
   }
   /**
-   * Get all analysis history for statistics
+   * Get all analysis history from session storage
    */
   getAnalysisHistory() {
-    return this.getSetting("analysisHistory", []);
+    const history = this.getSetting("analysisHistory", []) || [];
+    console.log(`\u{1F4CB} Retrieved ${history.length} analyses from session storage`);
+    return history;
   }
   /**
-   * Get error history
+   * Get error history from session storage
    */
   getErrorHistory() {
-    return this.getSetting("errorHistory", []);
+    const history = this.getSetting("errorHistory", []) || [];
+    console.log(`\u{1F4CB} Retrieved ${history.length} errors from session storage`);
+    return history;
   }
   /**
    * Clear error history
    */
   async clearErrorHistory() {
+    console.log("\u{1F5D1}\uFE0F Clearing error history from session storage");
     await this.saveSetting("errorHistory", []);
   }
   /**
    * Clear analysis history
    */
   async clearAnalysisHistory() {
+    console.log("\u{1F5D1}\uFE0F Clearing analysis history from session storage");
     await this.saveSetting("analysisHistory", []);
   }
 };
@@ -18827,12 +18948,27 @@ var ErrorScanner = class {
     this.scanResults = [];
   }
   /**
-   * Get all Python files from workspace
+   * Get all Python files from current workspace ONLY
    */
   async getPythonFiles() {
     try {
-      console.log("\u{1F50D} Searching for Python files...");
+      console.log("\u{1F50D} Searching for Python files in workspace...");
+      if (!vscode6.workspace.workspaceFolders || vscode6.workspace.workspaceFolders.length === 0) {
+        console.warn("\u26A0\uFE0F No workspace folder is open");
+        vscode6.window.showErrorMessage("\u274C No workspace folder open! Please open a folder first.");
+        return [];
+      }
+      const workspacePath = vscode6.workspace.workspaceFolders[0].uri.fsPath;
+      console.log("\u{1F4C1} Workspace path:", workspacePath);
       const pythonFiles = await vscode6.workspace.findFiles("**/*.py", "**/node_modules/**", 100);
+      const workspaceFiles = pythonFiles.filter((file) => {
+        const isInWorkspace = file.fsPath.startsWith(workspacePath);
+        if (!isInWorkspace) {
+          console.log(`\u26A0\uFE0F Skipping file outside workspace: ${file.fsPath}`);
+        }
+        return isInWorkspace;
+      });
+      console.log(`\u{1F4CA} Found ${pythonFiles.length} Python files, ${workspaceFiles.length} in workspace`);
       const excludePatterns = [
         /^test/i,
         // test*.py
@@ -18857,11 +18993,11 @@ var ErrorScanner = class {
         /\btest\b/i
         // any file with 'test' in name
       ];
-      const filteredFiles = pythonFiles.filter((file) => {
+      const filteredFiles = workspaceFiles.filter((file) => {
         const fileName = file.fsPath.split("\\").pop()?.split("/").pop() || "";
         return !excludePatterns.some((pattern) => pattern.test(fileName));
       });
-      console.log(`\u2705 Found ${pythonFiles.length} Python files, ${filteredFiles.length} to scan`);
+      console.log(`\u2705 Filtered to ${filteredFiles.length} production files for scanning`);
       return filteredFiles;
     } catch (error) {
       console.error("\u274C Error getting Python files:", error);
@@ -19059,7 +19195,15 @@ function activate(context) {
         console.log("\u{1F504} Configuration reloaded");
       }
     });
-    context.subscriptions.push(configListener);
+    const workspaceFolderListener = vscode7.workspace.onDidChangeWorkspaceFolders(async (e) => {
+      if (e.added.length > 0 || e.removed.length > 0) {
+        console.log("\u{1F4C1} Workspace folders changed! Clearing session data...");
+        await storageService.clearAnalysisHistory();
+        await storageService.clearErrorHistory();
+        console.log("\u{1F9F9} Session data cleared for new workspace");
+      }
+    });
+    context.subscriptions.push(configListener, workspaceFolderListener);
     console.log("\u2728 DEBUGXIA Extension fully activated!");
     vscode7.window.showInformationMessage("\u{1F680} DEBUGXIA is ready! Press Ctrl+Shift+Z to analyze code.");
   } catch (error) {
@@ -19247,11 +19391,17 @@ function registerCommands(context, apiClient2, errorDetector2, errorListProvider
   }
 }
 function deactivate() {
-  console.log("DEBUGXIA extension deactivated");
+  console.log("\u{1F6D1} DEBUGXIA extension deactivating...");
+  console.log("\u{1F9F9} Clearing all session data...");
+  if (storageService) {
+    storageService.clearAnalysisHistory().catch((e) => console.log("Error clearing analysis:", e));
+    storageService.clearErrorHistory().catch((e) => console.log("Error clearing errors:", e));
+  }
   if (scannerTerminal) {
     scannerTerminal.dispose();
   }
   errorDetector?.dispose();
+  console.log("\u2705 DEBUGXIA extension deactivated - all session data cleared");
 }
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {

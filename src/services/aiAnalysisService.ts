@@ -93,11 +93,28 @@ SCORING RULES:
 
 CRITICAL RESPONSE RULES:
 1. ALWAYS respond with ONLY valid JSON - NO explanations, NO markdown, NO comments
-2. Follow the exact structure provided
+2. Follow the exact structure provided with line numbers and fixes
 3. Distinguish ERRORS (code is broken) from IMPROVEMENTS (style, performance)
 4. Categorize issues by severity: CRITICAL (breaks code), HIGH (major), MEDIUM, LOW
 5. Include line numbers for ALL issues
 6. Provide actionable fixes for each issue
+
+Return JSON with issues as objects:
+{
+  "errorScore": <0-100>,
+  "codeQualityScore": <0-100>,
+  "optimizationScore": <0-100>,
+  "summary": "<summary>",
+  "issues": [
+    {
+      "line": <line number>,
+      "type": "<CRITICAL|HIGH|MEDIUM|LOW>",
+      "issue": "<short description>",
+      "fix": "<short fix>"
+    }
+  ],
+  "suggestions": []
+}
 
 Your response must be parseable valid JSON.`,
           },
@@ -176,7 +193,14 @@ Your response must be parseable valid JSON.`,
   "codeQualityScore": <0-100 based on design, readability, maintainability>,
   "optimizationScore": <0-100 based on performance potential>,
   "summary": "<executive summary>",
-  "issues": ["<issue1>", "<issue2>"],
+  "issues": [
+    {
+      "line": <line number>,
+      "type": "<CRITICAL|HIGH|MEDIUM|LOW>",
+      "issue": "<short problem description>",
+      "fix": "<short fix description>"
+    }
+  ],
   "suggestions": ["<suggestion1>", "<suggestion2>"]
 }
 

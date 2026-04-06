@@ -111,7 +111,17 @@ export function activate(context: vscode.ExtensionContext) {
       }
     });
 
-    context.subscriptions.push(configListener);
+    // Listen to workspace folder changes - clear data when switching workspaces
+    const workspaceFolderListener = vscode.workspace.onDidChangeWorkspaceFolders(async (e) => {
+      if (e.added.length > 0 || e.removed.length > 0) {
+        console.log('📁 Workspace folders changed! Clearing session data...');
+        await storageService.clearAnalysisHistory();
+        await storageService.clearErrorHistory();
+        console.log('🧹 Session data cleared for new workspace');
+      }
+    });
+
+    context.subscriptions.push(configListener, workspaceFolderListener);
     
     console.log("✨ DEBUGXIA Extension fully activated!");
     vscode.window.showInformationMessage("🚀 DEBUGXIA is ready! Press Ctrl+Shift+Z to analyze code.");
@@ -557,9 +567,19 @@ function initializeScannerTerminal(context: vscode.ExtensionContext) {
 }
 
 export function deactivate() {
-  console.log("DEBUGXIA extension deactivated");
+  console.log("🛑 DEBUGXIA extension deactivating...");
+  console.log("🧹 Clearing all session data...");
+  
+  // Clear all session-based storage
+  if (storageService) {
+    storageService.clearAnalysisHistory().catch(e => console.log("Error clearing analysis:", e));
+    storageService.clearErrorHistory().catch(e => console.log("Error clearing errors:", e));
+  }
+  
   if (scannerTerminal) {
     scannerTerminal.dispose();
   }
   errorDetector?.dispose();
+  
+  console.log("✅ DEBUGXIA extension deactivated - all session data cleared");
 }
