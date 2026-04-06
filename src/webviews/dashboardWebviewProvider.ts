@@ -27,11 +27,13 @@ export class DashboardWebviewProvider implements vscode.WebviewPanelSerializer {
       console.log('🔍 Discovering Python files in workspace...');
       const pythonFiles = await vscode.workspace.findFiles('**/*.py', '**/node_modules/**', 100);
       
-      // Filter out test files and temporary files
+      // Filter out test infrastructure files and temporary files
+      // IMPORTANT: Allow files like testfail*.py and tests with actual code to run
       const excludePatterns = [
-        /test.*\.py$/i,           // test*.py
-        /.*test\.py$/i,           // *test.py
-        /_old\.py$/i,             // *_old.py
+        /^test_.*\.py$/i,         // test_*.py (test infrastructure)
+        /.*_test\.py$/i,          // *_test.py (test infrastructure)
+        /^tests\.py$/i,           // tests.py (test infrastructure)
+        /^conftest\.py$/i,        // conftest.py (pytest config)
         /mock.*\.py$/i,           // mock*.py
         /.*mock\.py$/i,           // *mock.py
         /temp.*\.py$/i,           // temp*.py
@@ -126,11 +128,12 @@ export class DashboardWebviewProvider implements vscode.WebviewPanelSerializer {
     try {
       if (DashboardWebviewProvider.currentPanel) {
         console.log('📝 Updating dashboard HTML...');
+        console.log('📊 Analysis history length:', this.storageService.getAnalysisHistory().length);
         const html = await this.getHtmlForWebview(
           DashboardWebviewProvider.currentPanel.webview
         );
         DashboardWebviewProvider.currentPanel.webview.html = html;
-        console.log('✅ Dashboard HTML updated');
+        console.log('✅ Dashboard HTML updated successfully');
       } else {
         console.warn('⚠️ No dashboard panel to update');
       }
@@ -696,10 +699,11 @@ export class DashboardWebviewProvider implements vscode.WebviewPanelSerializer {
             console.error('❌ Failed to acquire VS Code API:', error);
           }
 
-          // File select dropdown change handler
-          document.addEventListener('DOMContentLoaded', function() {
+          // Attach file select dropdown handler immediately (not waiting for DOMContentLoaded)
+          function attachFileSelectListener() {
             const fileSelect = document.querySelector('.file-select');
             if (fileSelect) {
+              console.log('📌 Attaching event listener to file select');
               fileSelect.addEventListener('change', function() {
                 const value = this.value;
                 console.log('📁 File selected:', value);
@@ -707,6 +711,7 @@ export class DashboardWebviewProvider implements vscode.WebviewPanelSerializer {
                 if (value.startsWith('analyzed-')) {
                   // Analyzed file selected
                   const fileIndex = parseInt(value.replace('analyzed-', ''));
+                  console.log('✓ Selected analyzed file index:', fileIndex);
                   vscode.postMessage({
                     command: 'select-file',
                     fileIndex: fileIndex
@@ -721,8 +726,14 @@ export class DashboardWebviewProvider implements vscode.WebviewPanelSerializer {
                   });
                 }
               });
+            } else {
+              console.warn('⚠️ File select element not found');
             }
-          });
+          }
+          
+          // Attach immediately and also wait for DOM ready as backup
+          attachFileSelectListener();
+          document.addEventListener('DOMContentLoaded', attachFileSelectListener);
 
           // Browse files - opens file picker
           function browseFiles() {

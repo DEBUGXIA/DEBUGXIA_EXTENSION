@@ -17838,12 +17838,14 @@ var DashboardWebviewProvider = class _DashboardWebviewProvider {
       console.log("\u{1F50D} Discovering Python files in workspace...");
       const pythonFiles = await vscode5.workspace.findFiles("**/*.py", "**/node_modules/**", 100);
       const excludePatterns = [
-        /test.*\.py$/i,
-        // test*.py
-        /.*test\.py$/i,
-        // *test.py
-        /_old\.py$/i,
-        // *_old.py
+        /^test_.*\.py$/i,
+        // test_*.py (test infrastructure)
+        /.*_test\.py$/i,
+        // *_test.py (test infrastructure)
+        /^tests\.py$/i,
+        // tests.py (test infrastructure)
+        /^conftest\.py$/i,
+        // conftest.py (pytest config)
         /mock.*\.py$/i,
         // mock*.py
         /.*mock\.py$/i,
@@ -17928,11 +17930,12 @@ var DashboardWebviewProvider = class _DashboardWebviewProvider {
     try {
       if (_DashboardWebviewProvider.currentPanel) {
         console.log("\u{1F4DD} Updating dashboard HTML...");
+        console.log("\u{1F4CA} Analysis history length:", this.storageService.getAnalysisHistory().length);
         const html = await this.getHtmlForWebview(
           _DashboardWebviewProvider.currentPanel.webview
         );
         _DashboardWebviewProvider.currentPanel.webview.html = html;
-        console.log("\u2705 Dashboard HTML updated");
+        console.log("\u2705 Dashboard HTML updated successfully");
       } else {
         console.warn("\u26A0\uFE0F No dashboard panel to update");
       }
@@ -18478,10 +18481,11 @@ var DashboardWebviewProvider = class _DashboardWebviewProvider {
             console.error('\u274C Failed to acquire VS Code API:', error);
           }
 
-          // File select dropdown change handler
-          document.addEventListener('DOMContentLoaded', function() {
+          // Attach file select dropdown handler immediately (not waiting for DOMContentLoaded)
+          function attachFileSelectListener() {
             const fileSelect = document.querySelector('.file-select');
             if (fileSelect) {
+              console.log('\u{1F4CC} Attaching event listener to file select');
               fileSelect.addEventListener('change', function() {
                 const value = this.value;
                 console.log('\u{1F4C1} File selected:', value);
@@ -18489,6 +18493,7 @@ var DashboardWebviewProvider = class _DashboardWebviewProvider {
                 if (value.startsWith('analyzed-')) {
                   // Analyzed file selected
                   const fileIndex = parseInt(value.replace('analyzed-', ''));
+                  console.log('\u2713 Selected analyzed file index:', fileIndex);
                   vscode.postMessage({
                     command: 'select-file',
                     fileIndex: fileIndex
@@ -18503,8 +18508,14 @@ var DashboardWebviewProvider = class _DashboardWebviewProvider {
                   });
                 }
               });
+            } else {
+              console.warn('\u26A0\uFE0F File select element not found');
             }
-          });
+          }
+          
+          // Attach immediately and also wait for DOM ready as backup
+          attachFileSelectListener();
+          document.addEventListener('DOMContentLoaded', attachFileSelectListener);
 
           // Browse files - opens file picker
           function browseFiles() {
@@ -18953,6 +18964,7 @@ function registerCommands(context, apiClient2, errorDetector2, errorListProvider
       async (filePath) => {
         try {
           console.log("\u{1F4DD} analyzeFileCmd triggered with filePath:", filePath);
+          console.log("\u{1F4CA} Current analysis history:", storageService.getAnalysisHistory().length, "entries");
           if (!filePath) {
             const editor = vscode6.window.activeTextEditor;
             if (!editor) {
@@ -18960,6 +18972,9 @@ function registerCommands(context, apiClient2, errorDetector2, errorListProvider
               return;
             }
             filePath = editor.document.fileName;
+          }
+          if (filePath && filePath.startsWith("file-")) {
+            filePath = filePath.replace("file-", "");
           }
           console.log("\u{1F50D} Analyzing file:", filePath);
           vscode6.window.showInformationMessage(`Analyzing ${path3.basename(filePath)}... \u26A1`);
@@ -18996,7 +19011,14 @@ function registerCommands(context, apiClient2, errorDetector2, errorListProvider
           };
           console.log("\u{1F4BE} Saving analysis");
           await storageService.saveAnalysis(analysisData);
-          console.log("\u2705 Analysis saved");
+          const allAnalyses = storageService.getAnalysisHistory();
+          console.log(`\u2705 Analysis saved - total ${allAnalyses.length} in history`);
+          console.log("\u{1F4CB} Last saved analysis:", {
+            fileName: allAnalyses[allAnalyses.length - 1]?.displayName,
+            errorScore: allAnalyses[allAnalyses.length - 1]?.errorScore,
+            codeQualityScore: allAnalyses[allAnalyses.length - 1]?.codeQualityScore,
+            optimizationScore: allAnalyses[allAnalyses.length - 1]?.optimizationScore
+          });
           console.log("\u{1F3A8} Opening dashboard...");
           DashboardWebviewProvider.show(context.extensionUri, apiClient2, storageService);
           await new Promise((r) => setTimeout(r, 500));

@@ -187,6 +187,7 @@ function registerCommands(
       async (filePath?: string) => {
         try {
           console.log('📝 analyzeFileCmd triggered with filePath:', filePath);
+          console.log('📊 Current analysis history:', storageService.getAnalysisHistory().length, 'entries');
           
           if (!filePath) {
             const editor = vscode.window.activeTextEditor;
@@ -195,6 +196,11 @@ function registerCommands(
               return;
             }
             filePath = editor.document.fileName;
+          }
+
+          // Normalize path
+          if (filePath && filePath.startsWith('file-')) {
+            filePath = filePath.replace('file-', '');
           }
 
           console.log("🔍 Analyzing file:", filePath);
@@ -243,7 +249,16 @@ function registerCommands(
 
           console.log("💾 Saving analysis");
           await storageService.saveAnalysis(analysisData);
-          console.log("✅ Analysis saved");
+          
+          // Verify it was saved
+          const allAnalyses = storageService.getAnalysisHistory();
+          console.log(`✅ Analysis saved - total ${allAnalyses.length} in history`);
+          console.log("📋 Last saved analysis:", {
+            fileName: allAnalyses[allAnalyses.length - 1]?.displayName,
+            errorScore: allAnalyses[allAnalyses.length - 1]?.errorScore,
+            codeQualityScore: allAnalyses[allAnalyses.length - 1]?.codeQualityScore,
+            optimizationScore: allAnalyses[allAnalyses.length - 1]?.optimizationScore,
+          });
 
           // Show dashboard and refresh it with new data
           console.log("🎨 Opening dashboard...");
