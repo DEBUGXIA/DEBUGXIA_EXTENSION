@@ -27,21 +27,21 @@ export class DashboardWebviewProvider implements vscode.WebviewPanelSerializer {
       console.log('🔍 Discovering Python files in workspace...');
       const pythonFiles = await vscode.workspace.findFiles('**/*.py', '**/node_modules/**', 100);
       
-      // Filter out test infrastructure files and temporary files
-      // IMPORTANT: Allow files like testfail*.py and tests with actual code to run
+      // Filter out test infrastructure files and temporary/demo files
       const excludePatterns = [
-        /^test_.*\.py$/i,         // test_*.py (test infrastructure)
-        /.*_test\.py$/i,          // *_test.py (test infrastructure)
-        /^tests\.py$/i,           // tests.py (test infrastructure)
-        /^conftest\.py$/i,        // conftest.py (pytest config)
-        /mock.*\.py$/i,           // mock*.py
-        /.*mock\.py$/i,           // *mock.py
-        /temp.*\.py$/i,           // temp*.py
-        /tmp.*\.py$/i,            // tmp*.py
-        /\.test\./i,              // *.test.*
-        /example.*\.py$/i,        // example*.py
-        /.*example\.py$/i,        // *example.py
-        /fixture.*\.py$/i,        // fixture*.py
+        /^test/i,                    // test*.py
+        /test$/i,                    // *test.py
+        /testfail/i,                 // testfail*.py (demo/test files)
+        /demo/i,                     // demo*.py
+        /sample/i,                   // sample*.py
+        /^conftest/i,                // conftest.py (pytest config)
+        /mock/i,                     // mock*.py
+        /fixture/i,                  // fixture*.py
+        /_old/i,                     // *_old.py
+        /temp/i,                     // temp*.py
+        /tmp/i,                      // tmp*.py
+        /example/i,                  // example*.py
+        /\btest\b/i,                // any file with 'test' in name
       ];
       
       const filteredFiles = pythonFiles.filter(file => {
@@ -146,10 +146,28 @@ export class DashboardWebviewProvider implements vscode.WebviewPanelSerializer {
     const userId = this.storageService.getUserId();
     const analytics = await this.apiClient.getUserAnalytics(userId);
     const errorHistory = this.storageService.getErrorHistory();
-    const analysisHistory = this.storageService.getAnalysisHistory();
+    let analysisHistory = this.storageService.getAnalysisHistory();
 
-    // Discover Python files in workspace
-    this.discoveredFiles = await this.discoverPythonFiles();
+    // Filter out test/demo files from analysis history
+    const testFilePatterns = [
+      /^test/i,
+      /test$/i,
+      /testfail/i,
+      /demo/i,
+      /sample/i,
+      /fixture/i,
+      /mock/i,
+      /_old/i,
+      /temp/i,
+      /tmp/i,
+      /example/i,
+      /\btest\b/i,
+    ];
+
+    analysisHistory = analysisHistory.filter(f => {
+      const fileName = f.fileName ? f.fileName.split('\\').pop()?.split('/').pop() || '' : '';
+      return !testFilePatterns.some(pattern => pattern.test(fileName));
+    });
 
     // ONLY show content if there's REAL analysis history
     const hasAnalysis = analysisHistory && analysisHistory.length > 0;
@@ -158,26 +176,17 @@ export class DashboardWebviewProvider implements vscode.WebviewPanelSerializer {
     const stats = hasAnalysis ? this.calculateAIStats(analysisHistory, errorHistory) : null;
     const currentFile = hasAnalysis ? analysisHistory[analysisHistory.length - 1] : null;
     
-    // Generate file list - combine analyzed files and discovered files
+    // Generate file list - show only analyzed error files
     let fileListHtml = "";
     
     if (hasAnalysis) {
-      // Show analyzed files first
+      // Show error files from scan
       fileListHtml = analysisHistory.map((f, idx) => {
         const fileName = f.fileName ? f.fileName.split('\\').pop().split('/').pop() : `File ${idx + 1}`;
-        return `<option value="analyzed-${idx}">✓ ${fileName}</option>`;
+        const errorIcon = f.errorScore > 0 ? '⚠️' : '✓';
+        return `<option value="analyzed-${idx}">${errorIcon} ${fileName}</option>`;
       }).join("");
     }
-    
-    // Add discovered files
-    const analyzedPaths = new Set(analysisHistory.map(f => f.fileName));
-    this.discoveredFiles.forEach((file) => {
-      const fsPath = file.fsPath;
-      if (!analyzedPaths.has(fsPath)) {
-        const fileName = fsPath.split('\\').pop()?.split('/').pop() || "Unknown";
-        fileListHtml += `<option value="file-${fsPath}">📄 ${fileName}</option>`;
-      }
-    });
 
     // Generate content ONLY if there's REAL AI analysis data
     const fileInfoContent = hasAnalysis && currentFile ? `
@@ -248,15 +257,10 @@ export class DashboardWebviewProvider implements vscode.WebviewPanelSerializer {
     ` : `
           <!-- Empty State -->
           <div class="empty-state">
-            <div class="empty-icon">📭</div>
-            <div class="empty-title">No Files Analyzed Yet</div>
-            <div class="empty-text">Select a Python file from the dropdown above to analyze it and get AI insights.</div>
-            ${this.discoveredFiles.length === 0 ? `
-              <button class="browse-btn" onclick="browseFiles()" style="margin-top: 16px;">
-                <span>🔍</span>
-                <span>Browse & Analyze</span>
-              </button>
-            ` : ''}
+            <div class="empty-icon">�</div>
+            <div class="empty-title">Scan Your Codebase for Errors</div>
+            <div class="empty-text">Press <strong>Ctrl+Shift+Z</strong> to scan all files and detect errors using AI analysis.</div>
+            <div class="empty-text" style="font-size: 12px; color: #6B7280; margin-top: 8px;">The scan will use your API key to analyze code and find all error files in your workspace.</div>
           </div>
     `;
 

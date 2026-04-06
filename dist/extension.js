@@ -8829,7 +8829,7 @@ var require_mime_types = __commonJS({
   "node_modules/mime-types/index.js"(exports2) {
     "use strict";
     var db = require_mime_db();
-    var extname3 = require("path").extname;
+    var extname4 = require("path").extname;
     var EXTRACT_TYPE_REGEXP = /^\s*([^;\s]*)(?:;|\s|$)/;
     var TEXT_TYPE_REGEXP = /^text\//i;
     exports2.charset = charset;
@@ -8880,11 +8880,11 @@ var require_mime_types = __commonJS({
       }
       return exts[0];
     }
-    function lookup(path4) {
-      if (!path4 || typeof path4 !== "string") {
+    function lookup(path5) {
+      if (!path5 || typeof path5 !== "string") {
         return false;
       }
-      var extension2 = extname3("x." + path4).toLowerCase().substr(1);
+      var extension2 = extname4("x." + path5).toLowerCase().substr(1);
       if (!extension2) {
         return false;
       }
@@ -9989,7 +9989,7 @@ var require_form_data = __commonJS({
     "use strict";
     var CombinedStream = require_combined_stream();
     var util3 = require("util");
-    var path4 = require("path");
+    var path5 = require("path");
     var http3 = require("http");
     var https2 = require("https");
     var parseUrl = require("url").parse;
@@ -10117,11 +10117,11 @@ var require_form_data = __commonJS({
     FormData3.prototype._getContentDisposition = function(value, options) {
       var filename;
       if (typeof options.filepath === "string") {
-        filename = path4.normalize(options.filepath).replace(/\\/g, "/");
+        filename = path5.normalize(options.filepath).replace(/\\/g, "/");
       } else if (options.filename || value && (value.name || value.path)) {
-        filename = path4.basename(options.filename || value && (value.name || value.path));
+        filename = path5.basename(options.filename || value && (value.name || value.path));
       } else if (value && value.readable && hasOwn(value, "httpVersion")) {
-        filename = path4.basename(value.client._httpMessage.path || "");
+        filename = path5.basename(value.client._httpMessage.path || "");
       }
       if (filename) {
         return 'filename="' + filename + '"';
@@ -11658,8 +11658,8 @@ __export(extension_exports, {
   deactivate: () => deactivate
 });
 module.exports = __toCommonJS(extension_exports);
-var vscode6 = __toESM(require("vscode"));
-var path3 = __toESM(require("path"));
+var vscode7 = __toESM(require("vscode"));
+var path4 = __toESM(require("path"));
 
 // node_modules/axios/lib/helpers/bind.js
 function bind(fn, thisArg) {
@@ -12191,10 +12191,10 @@ function isVisitable(thing) {
 function removeBrackets(key) {
   return utils_default.endsWith(key, "[]") ? key.slice(0, -2) : key;
 }
-function renderKey(path4, key, dots) {
-  if (!path4)
+function renderKey(path5, key, dots) {
+  if (!path5)
     return key;
-  return path4.concat(key).map(function each(token, i) {
+  return path5.concat(key).map(function each(token, i) {
     token = removeBrackets(token);
     return !dots && i ? "[" + token + "]" : token;
   }).join(dots ? "." : "");
@@ -12248,13 +12248,13 @@ function toFormData(obj, formData, options) {
     }
     return value;
   }
-  function defaultVisitor(value, key, path4) {
+  function defaultVisitor(value, key, path5) {
     let arr = value;
     if (utils_default.isReactNative(formData) && utils_default.isReactNativeBlob(value)) {
-      formData.append(renderKey(path4, key, dots), convertValue(value));
+      formData.append(renderKey(path5, key, dots), convertValue(value));
       return false;
     }
-    if (value && !path4 && typeof value === "object") {
+    if (value && !path5 && typeof value === "object") {
       if (utils_default.endsWith(key, "{}")) {
         key = metaTokens ? key : key.slice(0, -2);
         value = JSON.stringify(value);
@@ -12273,7 +12273,7 @@ function toFormData(obj, formData, options) {
     if (isVisitable(value)) {
       return true;
     }
-    formData.append(renderKey(path4, key, dots), convertValue(value));
+    formData.append(renderKey(path5, key, dots), convertValue(value));
     return false;
   }
   const stack = [];
@@ -12282,17 +12282,17 @@ function toFormData(obj, formData, options) {
     convertValue,
     isVisitable
   });
-  function build(value, path4) {
+  function build(value, path5) {
     if (utils_default.isUndefined(value))
       return;
     if (stack.indexOf(value) !== -1) {
-      throw Error("Circular reference detected in " + path4.join("."));
+      throw Error("Circular reference detected in " + path5.join("."));
     }
     stack.push(value);
     utils_default.forEach(value, function each(el, key) {
-      const result = !(utils_default.isUndefined(el) || el === null) && visitor.call(formData, el, utils_default.isString(key) ? key.trim() : key, path4, exposedHelpers);
+      const result = !(utils_default.isUndefined(el) || el === null) && visitor.call(formData, el, utils_default.isString(key) ? key.trim() : key, path5, exposedHelpers);
       if (result === true) {
-        build(el, path4 ? path4.concat(key) : [key]);
+        build(el, path5 ? path5.concat(key) : [key]);
       }
     });
     stack.pop();
@@ -12504,7 +12504,7 @@ var platform_default = {
 // node_modules/axios/lib/helpers/toURLEncodedForm.js
 function toURLEncodedForm(data, options) {
   return toFormData_default(data, new platform_default.classes.URLSearchParams(), {
-    visitor: function(value, key, path4, helpers) {
+    visitor: function(value, key, path5, helpers) {
       if (platform_default.isNode && utils_default.isBuffer(value)) {
         this.append(key, value.toString("base64"));
         return false;
@@ -12534,12 +12534,12 @@ function arrayToObject(arr) {
   return obj;
 }
 function formDataToJSON(formData) {
-  function buildPath(path4, value, target, index) {
-    let name = path4[index++];
+  function buildPath(path5, value, target, index) {
+    let name = path5[index++];
     if (name === "__proto__")
       return true;
     const isNumericKey = Number.isFinite(+name);
-    const isLast = index >= path4.length;
+    const isLast = index >= path5.length;
     name = !name && utils_default.isArray(target) ? target.length : name;
     if (isLast) {
       if (utils_default.hasOwnProp(target, name)) {
@@ -12552,7 +12552,7 @@ function formDataToJSON(formData) {
     if (!target[name] || !utils_default.isObject(target[name])) {
       target[name] = [];
     }
-    const result = buildPath(path4, value, target[name], index);
+    const result = buildPath(path5, value, target[name], index);
     if (result && utils_default.isArray(target[name])) {
       target[name] = arrayToObject(target[name]);
     }
@@ -13938,9 +13938,9 @@ var http_default = isHttpAdapterSupported && function httpAdapter(config) {
       auth = urlUsername + ":" + urlPassword;
     }
     auth && headers.delete("authorization");
-    let path4;
+    let path5;
     try {
-      path4 = buildURL(
+      path5 = buildURL(
         parsed.pathname + parsed.search,
         config.params,
         config.paramsSerializer
@@ -13958,7 +13958,7 @@ var http_default = isHttpAdapterSupported && function httpAdapter(config) {
       false
     );
     const options = {
-      path: path4,
+      path: path5,
       method,
       headers: headers.toJSON(),
       agents: { http: config.httpAgent, https: config.httpsAgent },
@@ -14209,15 +14209,15 @@ var isURLSameOrigin_default = platform_default.hasStandardBrowserEnv ? /* @__PUR
 var cookies_default = platform_default.hasStandardBrowserEnv ? (
   // Standard browser envs support document.cookie
   {
-    write(name, value, expires, path4, domain, secure, sameSite) {
+    write(name, value, expires, path5, domain, secure, sameSite) {
       if (typeof document === "undefined")
         return;
       const cookie = [`${name}=${encodeURIComponent(value)}`];
       if (utils_default.isNumber(expires)) {
         cookie.push(`expires=${new Date(expires).toUTCString()}`);
       }
-      if (utils_default.isString(path4)) {
-        cookie.push(`path=${path4}`);
+      if (utils_default.isString(path5)) {
+        cookie.push(`path=${path5}`);
       }
       if (utils_default.isString(domain)) {
         cookie.push(`domain=${domain}`);
@@ -16753,26 +16753,26 @@ var ChatWebviewProvider = class _ChatWebviewProvider {
       const seenPaths = /* @__PURE__ */ new Set();
       const activeEditor = vscode4.window.activeTextEditor;
       if (activeEditor) {
-        const path4 = activeEditor.document.uri.fsPath;
+        const path5 = activeEditor.document.uri.fsPath;
         const name = activeEditor.document.fileName.split(/[\\/]/).pop() || "Untitled";
-        if (!seenPaths.has(path4)) {
-          availableFiles.push({ path: path4, name });
-          seenPaths.add(path4);
+        if (!seenPaths.has(path5)) {
+          availableFiles.push({ path: path5, name });
+          seenPaths.add(path5);
         }
       }
       vscode4.window.visibleTextEditors.forEach((editor) => {
-        const path4 = editor.document.uri.fsPath;
+        const path5 = editor.document.uri.fsPath;
         const name = editor.document.fileName.split(/[\\/]/).pop() || "Untitled";
-        if (!seenPaths.has(path4) && editor.document.languageId !== "plaintext") {
-          availableFiles.push({ path: path4, name });
-          seenPaths.add(path4);
+        if (!seenPaths.has(path5) && editor.document.languageId !== "plaintext") {
+          availableFiles.push({ path: path5, name });
+          seenPaths.add(path5);
         }
       });
       for (const cachedFile of this.errorFileCache.values()) {
-        const path4 = cachedFile.context.filePath;
-        if (!seenPaths.has(path4)) {
-          availableFiles.push({ path: path4, name: cachedFile.context.fileName });
-          seenPaths.add(path4);
+        const path5 = cachedFile.context.filePath;
+        if (!seenPaths.has(path5)) {
+          availableFiles.push({ path: path5, name: cachedFile.context.fileName });
+          seenPaths.add(path5);
         }
       }
       console.log(`\u26A1 [FAST MODE] Found ${availableFiles.length} available files to analyze`);
@@ -17838,30 +17838,32 @@ var DashboardWebviewProvider = class _DashboardWebviewProvider {
       console.log("\u{1F50D} Discovering Python files in workspace...");
       const pythonFiles = await vscode5.workspace.findFiles("**/*.py", "**/node_modules/**", 100);
       const excludePatterns = [
-        /^test_.*\.py$/i,
-        // test_*.py (test infrastructure)
-        /.*_test\.py$/i,
-        // *_test.py (test infrastructure)
-        /^tests\.py$/i,
-        // tests.py (test infrastructure)
-        /^conftest\.py$/i,
+        /^test/i,
+        // test*.py
+        /test$/i,
+        // *test.py
+        /testfail/i,
+        // testfail*.py (demo/test files)
+        /demo/i,
+        // demo*.py
+        /sample/i,
+        // sample*.py
+        /^conftest/i,
         // conftest.py (pytest config)
-        /mock.*\.py$/i,
+        /mock/i,
         // mock*.py
-        /.*mock\.py$/i,
-        // *mock.py
-        /temp.*\.py$/i,
-        // temp*.py
-        /tmp.*\.py$/i,
-        // tmp*.py
-        /\.test\./i,
-        // *.test.*
-        /example.*\.py$/i,
-        // example*.py
-        /.*example\.py$/i,
-        // *example.py
-        /fixture.*\.py$/i
+        /fixture/i,
         // fixture*.py
+        /_old/i,
+        // *_old.py
+        /temp/i,
+        // temp*.py
+        /tmp/i,
+        // tmp*.py
+        /example/i,
+        // example*.py
+        /\btest\b/i
+        // any file with 'test' in name
       ];
       const filteredFiles = pythonFiles.filter((file) => {
         const fileName = file.fsPath.split("\\").pop()?.split("/").pop() || "";
@@ -17947,8 +17949,25 @@ var DashboardWebviewProvider = class _DashboardWebviewProvider {
     const userId = this.storageService.getUserId();
     const analytics = await this.apiClient.getUserAnalytics(userId);
     const errorHistory = this.storageService.getErrorHistory();
-    const analysisHistory = this.storageService.getAnalysisHistory();
-    this.discoveredFiles = await this.discoverPythonFiles();
+    let analysisHistory = this.storageService.getAnalysisHistory();
+    const testFilePatterns = [
+      /^test/i,
+      /test$/i,
+      /testfail/i,
+      /demo/i,
+      /sample/i,
+      /fixture/i,
+      /mock/i,
+      /_old/i,
+      /temp/i,
+      /tmp/i,
+      /example/i,
+      /\btest\b/i
+    ];
+    analysisHistory = analysisHistory.filter((f) => {
+      const fileName = f.fileName ? f.fileName.split("\\").pop()?.split("/").pop() || "" : "";
+      return !testFilePatterns.some((pattern) => pattern.test(fileName));
+    });
     const hasAnalysis = analysisHistory && analysisHistory.length > 0;
     const stats = hasAnalysis ? this.calculateAIStats(analysisHistory, errorHistory) : null;
     const currentFile = hasAnalysis ? analysisHistory[analysisHistory.length - 1] : null;
@@ -17956,17 +17975,10 @@ var DashboardWebviewProvider = class _DashboardWebviewProvider {
     if (hasAnalysis) {
       fileListHtml = analysisHistory.map((f, idx) => {
         const fileName = f.fileName ? f.fileName.split("\\").pop().split("/").pop() : `File ${idx + 1}`;
-        return `<option value="analyzed-${idx}">\u2713 ${fileName}</option>`;
+        const errorIcon = f.errorScore > 0 ? "\u26A0\uFE0F" : "\u2713";
+        return `<option value="analyzed-${idx}">${errorIcon} ${fileName}</option>`;
       }).join("");
     }
-    const analyzedPaths = new Set(analysisHistory.map((f) => f.fileName));
-    this.discoveredFiles.forEach((file) => {
-      const fsPath = file.fsPath;
-      if (!analyzedPaths.has(fsPath)) {
-        const fileName = fsPath.split("\\").pop()?.split("/").pop() || "Unknown";
-        fileListHtml += `<option value="file-${fsPath}">\u{1F4C4} ${fileName}</option>`;
-      }
-    });
     const fileInfoContent = hasAnalysis && currentFile ? `
           <!-- File Info Card -->
           <div class="file-info-card">
@@ -18031,15 +18043,10 @@ var DashboardWebviewProvider = class _DashboardWebviewProvider {
     ` : `
           <!-- Empty State -->
           <div class="empty-state">
-            <div class="empty-icon">\u{1F4ED}</div>
-            <div class="empty-title">No Files Analyzed Yet</div>
-            <div class="empty-text">Select a Python file from the dropdown above to analyze it and get AI insights.</div>
-            ${this.discoveredFiles.length === 0 ? `
-              <button class="browse-btn" onclick="browseFiles()" style="margin-top: 16px;">
-                <span>\u{1F50D}</span>
-                <span>Browse & Analyze</span>
-              </button>
-            ` : ""}
+            <div class="empty-icon">\uFFFD</div>
+            <div class="empty-title">Scan Your Codebase for Errors</div>
+            <div class="empty-text">Press <strong>Ctrl+Shift+Z</strong> to scan all files and detect errors using AI analysis.</div>
+            <div class="empty-text" style="font-size: 12px; color: #6B7280; margin-top: 8px;">The scan will use your API key to analyze code and find all error files in your workspace.</div>
           </div>
     `;
     return `
@@ -18809,12 +18816,155 @@ function displayBanner() {
 ${SCANNER_STARTING}`;
 }
 
+// src/services/errorScanner.ts
+var vscode6 = __toESM(require("vscode"));
+var path2 = __toESM(require("path"));
+var ErrorScanner = class {
+  constructor(aiAnalysisService2, storageService2) {
+    this.aiAnalysisService = aiAnalysisService2;
+    this.storageService = storageService2;
+    this.isScanning = false;
+    this.scanResults = [];
+  }
+  /**
+   * Get all Python files from workspace
+   */
+  async getPythonFiles() {
+    try {
+      console.log("\u{1F50D} Searching for Python files...");
+      const pythonFiles = await vscode6.workspace.findFiles("**/*.py", "**/node_modules/**", 100);
+      const excludePatterns = [
+        /^test/i,
+        // test*.py
+        /test$/i,
+        // *test.py
+        /testfail/i,
+        // testfail*.py (demo files)
+        /demo/i,
+        // demo*.py
+        /sample/i,
+        // sample*.py
+        /fixture/i,
+        // fixture*.py
+        /mock/i,
+        // mock*.py
+        /_old/i,
+        // *_old.py
+        /temp/i,
+        // temp*.py
+        /tmp/i,
+        // tmp*.py
+        /\btest\b/i
+        // any file with 'test' in name
+      ];
+      const filteredFiles = pythonFiles.filter((file) => {
+        const fileName = file.fsPath.split("\\").pop()?.split("/").pop() || "";
+        return !excludePatterns.some((pattern) => pattern.test(fileName));
+      });
+      console.log(`\u2705 Found ${pythonFiles.length} Python files, ${filteredFiles.length} to scan`);
+      return filteredFiles;
+    } catch (error) {
+      console.error("\u274C Error getting Python files:", error);
+      return [];
+    }
+  }
+  /**
+   * Scan all files for errors
+   */
+  async scanForErrors(onProgress) {
+    if (this.isScanning) {
+      console.warn("\u26A0\uFE0F Scan already in progress");
+      return [];
+    }
+    this.isScanning = true;
+    this.scanResults = [];
+    try {
+      console.log("\u{1F680} Starting error scan...");
+      const files = await this.getPythonFiles();
+      if (files.length === 0) {
+        console.log("\u26A0\uFE0F No Python files found to scan");
+        vscode6.window.showWarningMessage("No Python files found in workspace");
+        this.isScanning = false;
+        return [];
+      }
+      console.log(`\u{1F4CA} Scanning ${files.length} files for errors...`);
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        onProgress?.(i + 1, files.length);
+        try {
+          const fileContent = await vscode6.workspace.fs.readFile(file);
+          const text = new TextDecoder().decode(fileContent);
+          const fileName = path2.basename(file.fsPath);
+          const language = path2.extname(file.fsPath).slice(1) || "python";
+          console.log(`\u{1F50D} Analyzing [${i + 1}/${files.length}]: ${fileName}`);
+          const analysis = await this.aiAnalysisService.analyzeCode(text, language, fileName);
+          if (analysis.errorScore > 0) {
+            const report = {
+              filePath: file.fsPath,
+              fileName,
+              errorScore: analysis.errorScore,
+              issues: analysis.issues || [],
+              summary: analysis.summary || "File contains errors",
+              language,
+              timestamp: Date.now()
+            };
+            this.scanResults.push(report);
+            console.log(`\u26A0\uFE0F Found errors in ${fileName} (score: ${analysis.errorScore})`);
+            const lines = text.split("\n").length;
+            const functionCount = (text.match(/^def /gm) || []).length;
+            const classCount = (text.match(/^class /gm) || []).length;
+            await this.storageService.saveAnalysis({
+              fileName: file.fsPath,
+              displayName: fileName,
+              language,
+              lines,
+              functions: functionCount,
+              classes: classCount,
+              errorScore: analysis.errorScore,
+              codeQualityScore: analysis.codeQualityScore,
+              optimizationScore: analysis.optimizationScore,
+              summary: analysis.summary,
+              issues: analysis.issues,
+              suggestions: analysis.suggestions,
+              timestamp: Date.now()
+            });
+          } else {
+            console.log(`\u2705 No errors in ${fileName}`);
+          }
+        } catch (err) {
+          console.error(`\u274C Error analyzing ${file.fsPath}:`, err);
+        }
+      }
+      console.log(`
+\u2705 Scan complete! Found ${this.scanResults.length} files with errors`);
+      this.isScanning = false;
+      return this.scanResults;
+    } catch (error) {
+      console.error("\u274C Error during scan:", error);
+      this.isScanning = false;
+      throw error;
+    }
+  }
+  /**
+   * Get last scan results
+   */
+  getResults() {
+    return this.scanResults;
+  }
+  /**
+   * Check if scan is in progress
+   */
+  isScanning_() {
+    return this.isScanning;
+  }
+};
+
 // src/envLoader.ts
 var fs = __toESM(require("fs"));
-var path2 = __toESM(require("path"));
+var path3 = __toESM(require("path"));
 function loadEnvFile(extensionPath) {
   try {
-    const envPath = path2.join(extensionPath, ".env");
+    const envPath = path3.join(extensionPath, ".env");
     if (!fs.existsSync(envPath)) {
       console.log("\u26A0\uFE0F  .env file not found at:", envPath);
       return;
@@ -18848,6 +18998,7 @@ var apiClient;
 var errorDetector;
 var storageService;
 var aiAnalysisService;
+var errorScanner;
 var scannerTerminal;
 function activate(context) {
   try {
@@ -18865,7 +19016,7 @@ function activate(context) {
       enableTerminalAnalysis: config.enableTerminalAnalysis
     });
     if (!config.apiUrl || !config.apiKey) {
-      vscode6.window.showWarningMessage(
+      vscode7.window.showWarningMessage(
         "DEBUGXIA: API settings not configured. Some features may be limited. Check VS Code Settings > DEBUGXIA."
       );
       console.warn("\u26A0\uFE0F  API Configuration missing - some features will be disabled");
@@ -18873,9 +19024,10 @@ function activate(context) {
     apiClient = new ApiClient(config.apiUrl || "http://localhost:8000", config.apiKey || "");
     aiAnalysisService = new AIAnalysisService(config.apiKey || "");
     errorDetector = new ErrorDetector();
-    console.log("\u2705 API Client, AI Analysis Service, and Error Detector initialized");
+    errorScanner = new ErrorScanner(aiAnalysisService, storageService);
+    console.log("\u2705 API Client, AI Analysis Service, Error Detector, and Error Scanner initialized");
     const errorListProvider = new ErrorListProvider(errorDetector);
-    vscode6.window.registerTreeDataProvider("errorList", errorListProvider);
+    vscode7.window.registerTreeDataProvider("errorList", errorListProvider);
     console.log("\u2705 Error List Provider registered");
     const chatProvider = new ChatWebviewProvider(
       context.extensionUri,
@@ -18883,7 +19035,7 @@ function activate(context) {
       storageService
     );
     context.subscriptions.push(
-      vscode6.window.registerWebviewPanelSerializer("aiCodeMentor.chat", chatProvider)
+      vscode7.window.registerWebviewPanelSerializer("aiCodeMentor.chat", chatProvider)
     );
     console.log("\u2705 Chat Webview Provider registered");
     const dashboardProvider = new DashboardWebviewProvider(
@@ -18892,7 +19044,7 @@ function activate(context) {
       storageService
     );
     context.subscriptions.push(
-      vscode6.window.registerWebviewPanelSerializer(
+      vscode7.window.registerWebviewPanelSerializer(
         "aiCodeMentor.dashboard",
         dashboardProvider
       )
@@ -18900,7 +19052,7 @@ function activate(context) {
     console.log("\u2705 Dashboard Webview Provider registered");
     registerCommands(context, apiClient, errorDetector, errorListProvider);
     console.log("\u2705 Commands registered");
-    const configListener = vscode6.workspace.onDidChangeConfiguration((e) => {
+    const configListener = vscode7.workspace.onDidChangeConfiguration((e) => {
       if (e.affectsConfiguration("aiCodeMentor")) {
         const newConfig = getExtensionConfig();
         apiClient.setConfig(newConfig.apiUrl || "http://localhost:8000", newConfig.apiKey || "");
@@ -18909,14 +19061,14 @@ function activate(context) {
     });
     context.subscriptions.push(configListener);
     console.log("\u2728 DEBUGXIA Extension fully activated!");
-    vscode6.window.showInformationMessage("\u{1F680} DEBUGXIA is ready! Press Ctrl+Shift+Z to analyze code.");
+    vscode7.window.showInformationMessage("\u{1F680} DEBUGXIA is ready! Press Ctrl+Shift+Z to analyze code.");
   } catch (error) {
     console.error("\u274C Failed to activate extension:", error);
-    vscode6.window.showErrorMessage(`Extension activation failed: ${error}`);
+    vscode7.window.showErrorMessage(`Extension activation failed: ${error}`);
   }
 }
 function getExtensionConfig() {
-  const config = vscode6.workspace.getConfiguration("aiCodeMentor");
+  const config = vscode7.workspace.getConfiguration("aiCodeMentor");
   return {
     apiUrl: config.get("apiUrl") || "http://localhost:8000",
     apiKey: config.get("apiKey") || process.env.OPENROUTER_API_KEY || "",
@@ -18940,35 +19092,74 @@ function getExtensionConfig() {
 function registerCommands(context, apiClient2, errorDetector2, errorListProvider) {
   try {
     console.log("\u{1F4CB} Registering essential commands...");
-    const openChatCmd = vscode6.commands.registerCommand(
+    const scanErrorFilesCmd = vscode7.commands.registerCommand(
       "aiCodeMentor.openChat",
-      () => {
+      async () => {
         try {
-          console.log("\u{1F3A8} Opening Dashboard...");
+          console.log("\u{1F680} Ctrl+Shift+Z: Starting error file scan...");
+          const progressResult = await vscode7.window.withProgress(
+            {
+              location: vscode7.ProgressLocation.Window,
+              title: "DEBUGXIA: Scanning for error files...",
+              cancellable: false
+            },
+            async (progress) => {
+              try {
+                const config = getExtensionConfig();
+                if (!config.apiKey) {
+                  vscode7.window.showErrorMessage("\u274C API Key not configured! Please set OPENROUTER_API_KEY in settings.");
+                  return;
+                }
+                console.log("\u2705 API Key found, starting scan...");
+                await storageService.clearAnalysisHistory();
+                console.log("\u{1F9F9} Cleared previous analysis history");
+                const errorFiles = await errorScanner.scanForErrors((current, total) => {
+                  const percentage = Math.round(current / total * 100);
+                  progress.report({
+                    increment: current / total * 100,
+                    message: `Scanned ${current}/${total} files...`
+                  });
+                });
+                console.log(`\u2705 Scan complete! Found ${errorFiles.length} files with errors`);
+                if (errorFiles.length === 0) {
+                  vscode7.window.showInformationMessage("\u{1F389} No errors found! Your codebase is clean.");
+                } else {
+                  vscode7.window.showInformationMessage(`\u26A0\uFE0F Found ${errorFiles.length} file(s) with errors`);
+                }
+              } catch (error) {
+                console.error("\u274C Error during scan:", error);
+                const errorMsg = error instanceof Error ? error.message : String(error);
+                vscode7.window.showErrorMessage(`\u274C Scan failed: ${errorMsg}`);
+              }
+            }
+          );
+          console.log("\u{1F4CA} Opening dashboard with error files...");
           DashboardWebviewProvider.show(context.extensionUri, apiClient2, storageService);
+          await new Promise((r) => setTimeout(r, 500));
+          DashboardWebviewProvider.updatePanel();
         } catch (error) {
-          console.error("\u274C Error opening dashboard:", error);
-          vscode6.window.showErrorMessage(`Failed to open dashboard: ${error}`);
+          console.error("\u274C Error in Ctrl+Shift+Z handler:", error);
+          vscode7.window.showErrorMessage(`Failed to scan: ${error}`);
         }
       }
     );
-    const viewDashboardCmd = vscode6.commands.registerCommand(
+    const viewDashboardCmd = vscode7.commands.registerCommand(
       "aiCodeMentor.viewDashboard",
       () => {
         console.log("\u{1F4CA} Viewing Dashboard...");
         DashboardWebviewProvider.show(context.extensionUri, apiClient2, storageService);
       }
     );
-    const analyzeFileCmd = vscode6.commands.registerCommand(
+    const analyzeFileCmd = vscode7.commands.registerCommand(
       "debugxia.analyzeFile",
       async (filePath) => {
         try {
           console.log("\u{1F4DD} analyzeFileCmd triggered with filePath:", filePath);
           console.log("\u{1F4CA} Current analysis history:", storageService.getAnalysisHistory().length, "entries");
           if (!filePath) {
-            const editor = vscode6.window.activeTextEditor;
+            const editor = vscode7.window.activeTextEditor;
             if (!editor) {
-              vscode6.window.showErrorMessage("No active editor");
+              vscode7.window.showErrorMessage("No active editor");
               return;
             }
             filePath = editor.document.fileName;
@@ -18977,12 +19168,12 @@ function registerCommands(context, apiClient2, errorDetector2, errorListProvider
             filePath = filePath.replace("file-", "");
           }
           console.log("\u{1F50D} Analyzing file:", filePath);
-          vscode6.window.showInformationMessage(`Analyzing ${path3.basename(filePath)}... \u26A1`);
-          const uri = vscode6.Uri.file(filePath);
-          const fileContent = await vscode6.workspace.fs.readFile(uri);
+          vscode7.window.showInformationMessage(`Analyzing ${path4.basename(filePath)}... \u26A1`);
+          const uri = vscode7.Uri.file(filePath);
+          const fileContent = await vscode7.workspace.fs.readFile(uri);
           const text = new TextDecoder().decode(fileContent);
-          const fileName = path3.basename(filePath);
-          const language = path3.extname(filePath).slice(1) || "text";
+          const fileName = path4.basename(filePath);
+          const language = path4.extname(filePath).slice(1) || "text";
           const lines = text.split("\n").length;
           const functionCount = (text.match(/^(def|function|async function|class |interface |struct )/gm) || []).length;
           const classCount = (text.match(/^class /gm) || []).length;
@@ -19023,19 +19214,36 @@ function registerCommands(context, apiClient2, errorDetector2, errorListProvider
           DashboardWebviewProvider.show(context.extensionUri, apiClient2, storageService);
           await new Promise((r) => setTimeout(r, 500));
           DashboardWebviewProvider.updatePanel();
-          vscode6.window.showInformationMessage(`\u2705 Analysis complete for ${fileName}`);
+          vscode7.window.showInformationMessage(`\u2705 Analysis complete for ${fileName}`);
           console.log("\u2705 Analyze complete");
         } catch (error) {
           console.error("\u274C Error analyzing file:", error);
-          vscode6.window.showErrorMessage(`Error: ${error}`);
+          vscode7.window.showErrorMessage(`Error: ${error}`);
         }
       }
     );
-    context.subscriptions.push(openChatCmd, viewDashboardCmd, analyzeFileCmd);
+    context.subscriptions.push(scanErrorFilesCmd, viewDashboardCmd, analyzeFileCmd);
+    const clearCacheCmd = vscode7.commands.registerCommand(
+      "debugxia.clearCache",
+      async () => {
+        try {
+          console.log("\u{1F9F9} Clearing analysis cache...");
+          await storageService.clearAnalysisHistory();
+          await storageService.clearErrorHistory();
+          console.log("\u2705 Cache cleared");
+          vscode7.window.showInformationMessage("\u2705 Analysis cache cleared! Refresh dashboard to see changes.");
+          DashboardWebviewProvider.updatePanel();
+        } catch (error) {
+          console.error("\u274C Error clearing cache:", error);
+          vscode7.window.showErrorMessage(`Error: ${error}`);
+        }
+      }
+    );
+    context.subscriptions.push(clearCacheCmd);
     console.log("\u2705 Essential commands registered");
   } catch (error) {
     console.error("\u274C Error registering commands:", error);
-    vscode6.window.showErrorMessage(`Failed to register commands: ${error}`);
+    vscode7.window.showErrorMessage(`Failed to register commands: ${error}`);
   }
 }
 function deactivate() {

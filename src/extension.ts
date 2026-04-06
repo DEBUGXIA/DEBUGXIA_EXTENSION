@@ -14,12 +14,14 @@ import { ExtensionConfig } from "./types";
 import { StorageService } from "./services/storageService";
 import { displayBanner, SCANNER_ACTIVE } from "./ascii";
 import { AIAnalysisService } from "./services/aiAnalysisService";
+import { ErrorScanner } from "./services/errorScanner";
 import { loadEnvFile } from "./envLoader";
 
 let apiClient: ApiClient;
 let errorDetector: ErrorDetector;
 let storageService: StorageService;
 let aiAnalysisService: AIAnalysisService;
+let errorScanner: ErrorScanner;
 let scannerTerminal: vscode.Terminal | undefined;
 
 export function activate(context: vscode.ExtensionContext) {
@@ -56,7 +58,8 @@ export function activate(context: vscode.ExtensionContext) {
     apiClient = new ApiClient(config.apiUrl || "http://localhost:8000", config.apiKey || "");
     aiAnalysisService = new AIAnalysisService(config.apiKey || "");
     errorDetector = new ErrorDetector();
-    console.log("✅ API Client, AI Analysis Service, and Error Detector initialized");
+    errorScanner = new ErrorScanner(aiAnalysisService, storageService);
+    console.log("✅ API Client, AI Analysis Service, Error Detector, and Error Scanner initialized");
 
     // Register UI providers
     const errorListProvider = new ErrorListProvider(errorDetector);
@@ -158,16 +161,71 @@ function registerCommands(
   try {
     console.log('📋 Registering essential commands...');
 
-    // Open Chat / Dashboard
-    const openChatCmd = vscode.commands.registerCommand(
+    // Scan for Error Files (Ctrl+Shift+Z)
+    const scanErrorFilesCmd = vscode.commands.registerCommand(
       "aiCodeMentor.openChat",
-      () => {
+      async () => {
         try {
-          console.log("🎨 Opening Dashboard...");
+          console.log("🚀 Ctrl+Shift+Z: Starting error file scan...");
+          
+          // Show progress indicator
+          const progressResult = await vscode.window.withProgress(
+            {
+              location: vscode.ProgressLocation.Window,
+              title: "DEBUGXIA: Scanning for error files...",
+              cancellable: false,
+            },
+            async (progress) => {
+              try {
+                // Verify API key first
+                const config = getExtensionConfig();
+                if (!config.apiKey) {
+                  vscode.window.showErrorMessage('❌ API Key not configured! Please set OPENROUTER_API_KEY in settings.');
+                  return;
+                }
+                
+                console.log('✅ API Key found, starting scan...');
+                
+                // Clear previous analysis
+                await storageService.clearAnalysisHistory();
+                console.log('🧹 Cleared previous analysis history');
+                
+                // Scan for error files
+                const errorFiles = await errorScanner.scanForErrors((current, total) => {
+                  const percentage = Math.round((current / total) * 100);
+                  progress.report({ 
+                    increment: (current / total) * 100,
+                    message: `Scanned ${current}/${total} files...`
+                  });
+                });
+                
+                console.log(`✅ Scan complete! Found ${errorFiles.length} files with errors`);
+                
+                if (errorFiles.length === 0) {
+                  vscode.window.showInformationMessage('🎉 No errors found! Your codebase is clean.');
+                } else {
+                  vscode.window.showInformationMessage(`⚠️ Found ${errorFiles.length} file(s) with errors`);
+                }
+                
+              } catch (error) {
+                console.error('❌ Error during scan:', error);
+                const errorMsg = error instanceof Error ? error.message : String(error);
+                vscode.window.showErrorMessage(`❌ Scan failed: ${errorMsg}`);
+              }
+            }
+          );
+          
+          // Show dashboard with error files
+          console.log("📊 Opening dashboard with error files...");
           DashboardWebviewProvider.show(context.extensionUri, apiClient, storageService);
+          
+          // Wait for panel to be ready and update
+          await new Promise(r => setTimeout(r, 500));
+          DashboardWebviewProvider.updatePanel();
+          
         } catch (error) {
-          console.error("❌ Error opening dashboard:", error);
-          vscode.window.showErrorMessage(`Failed to open dashboard: ${error}`);
+          console.error("❌ Error in Ctrl+Shift+Z handler:", error);
+          vscode.window.showErrorMessage(`Failed to scan: ${error}`);
         }
       }
     );
@@ -278,7 +336,27 @@ function registerCommands(
       }
     );
 
-    context.subscriptions.push(openChatCmd, viewDashboardCmd, analyzeFileCmd);
+    context.subscriptions.push(scanErrorFilesCmd, viewDashboardCmd, analyzeFileCmd);
+    
+    // Clear All Analysis Cache Command
+    const clearCacheCmd = vscode.commands.registerCommand(
+      "debugxia.clearCache",
+      async () => {
+        try {
+          console.log("🧹 Clearing analysis cache...");
+          await storageService.clearAnalysisHistory();
+          await storageService.clearErrorHistory();
+          console.log("✅ Cache cleared");
+          vscode.window.showInformationMessage("✅ Analysis cache cleared! Refresh dashboard to see changes.");
+          DashboardWebviewProvider.updatePanel();
+        } catch (error) {
+          console.error("❌ Error clearing cache:", error);
+          vscode.window.showErrorMessage(`Error: ${error}`);
+        }
+      }
+    );
+    
+    context.subscriptions.push(clearCacheCmd);
     console.log('✅ Essential commands registered');
 
   } catch (error) {
