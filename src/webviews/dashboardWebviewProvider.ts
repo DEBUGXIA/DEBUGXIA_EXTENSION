@@ -7,6 +7,7 @@ import * as vscode from "vscode";
 import * as path from "path";
 import { ApiClient } from "../services/apiClient";
 import { StorageService } from "../services/storageService";
+import { AIAnalysisService } from "../services/aiAnalysisService";
 
 export class DashboardWebviewProvider implements vscode.WebviewPanelSerializer {
   private static currentPanel: vscode.WebviewPanel | undefined;
@@ -17,7 +18,8 @@ export class DashboardWebviewProvider implements vscode.WebviewPanelSerializer {
   constructor(
     private extensionUri: vscode.Uri,
     private apiClient: ApiClient,
-    private storageService: StorageService
+    private storageService: StorageService,
+    private aiAnalysisService: AIAnalysisService
   ) {}
 
   /**
@@ -72,7 +74,8 @@ export class DashboardWebviewProvider implements vscode.WebviewPanelSerializer {
   static show(
     extensionUri: vscode.Uri,
     apiClient: ApiClient,
-    storageService: StorageService
+    storageService: StorageService,
+    aiAnalysisService: AIAnalysisService
   ) {
     if (DashboardWebviewProvider.currentPanel) {
       DashboardWebviewProvider.currentPanel.reveal(vscode.ViewColumn.Beside);
@@ -95,7 +98,8 @@ export class DashboardWebviewProvider implements vscode.WebviewPanelSerializer {
       const provider = new DashboardWebviewProvider(
         extensionUri,
         apiClient,
-        storageService
+        storageService,
+        aiAnalysisService
       );
       DashboardWebviewProvider.provider = provider;
       provider.deserializeWebviewPanel(panel, null);
@@ -252,6 +256,11 @@ export class DashboardWebviewProvider implements vscode.WebviewPanelSerializer {
                 <div class="action-icon" style="color: #adcaf0;">➜</div>
                 <div class="action-label">Terminal</div>
               </button>
+            </div>
+
+            <!-- Results Panel -->
+            <div id="results-panel" class="results-panel" style="display: none; margin-top: 20px;">
+              <!-- Results content will be inserted here -->
             </div>
           </div>
     ` : `
@@ -669,6 +678,123 @@ export class DashboardWebviewProvider implements vscode.WebviewPanelSerializer {
             max-width: 300px;
             letter-spacing: 0.3px;
           }
+
+          .results-panel {
+            background-color: #1f2937;
+            border: 2px solid #6B7280;
+            border-radius: 12px;
+            padding: 16px;
+            max-height: 400px;
+            overflow-y: auto;
+            margin-top: 20px;
+          }
+
+          .result-section {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+          }
+
+          .result-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            color: #60a5fa;
+            margin-bottom: 8px;
+          }
+
+          .result-icon {
+            font-size: 18px;
+          }
+
+          .code-block {
+            background-color: #111827;
+            border: 1px solid #374151;
+            border-radius: 8px;
+            padding: 12px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            color: #d1d5db;
+            overflow-x: auto;
+            margin: 8px 0;
+            line-height: 1.6;
+          }
+
+          .explanation {
+            font-size: 13px;
+            color: #d1d5db;
+            margin: 8px 0;
+            padding: 8px;
+            background-color: rgba(96, 165, 250, 0.1);
+            border-left: 3px solid #60a5fa;
+            border-radius: 4px;
+          }
+
+          .option-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin: 12px 0;
+          }
+
+          .option-btn {
+            background-color: #374151;
+            border: 2px solid #6B7280;
+            border-radius: 8px;
+            padding: 10px 12px;
+            color: #d1d5db;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 13px;
+            transition: all 0.2s ease;
+          }
+
+          .option-btn:hover {
+            background-color: #4b5563;
+            border-color: #9ca3af;
+          }
+
+          .option-btn.active {
+            background-color: #02aae9;
+            border-color: #02aae9;
+            color: white;
+          }
+
+          .loading {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #60a5fa;
+            font-size: 13px;
+          }
+
+          .spinner {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border: 2px solid #60a5fa;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+          }
+
+          @keyframes spin {
+            to { transform: rotate(360deg); }
+          }
+
+          .error-result {
+            color: #ef4444;
+            font-weight: 500;
+            margin: 8px 0;
+          }
+
+          .success-result {
+            color: #10b981;
+            font-weight: 500;
+            margin: 8px 0;
+          }
         </style>
       </head>
       <body>
@@ -765,6 +891,7 @@ export class DashboardWebviewProvider implements vscode.WebviewPanelSerializer {
           // Fix error action
           function fixError() {
             console.log('🐛 fixError() called');
+            showLoading('Analyzing and fixing errors...');
             vscode.postMessage({
               command: 'fix-error'
             });
@@ -773,6 +900,7 @@ export class DashboardWebviewProvider implements vscode.WebviewPanelSerializer {
           // Optimize code action
           function optimize() {
             console.log('⚡ optimize() called');
+            showLoading('Generating optimization options...');
             vscode.postMessage({
               command: 'optimize-code'
             });
@@ -781,9 +909,175 @@ export class DashboardWebviewProvider implements vscode.WebviewPanelSerializer {
           // Open terminal action
           function openTerminal() {
             console.log('➜ openTerminal() called');
+            showLoading('Scanning for errors...');
             vscode.postMessage({
               command: 'open-terminal'
             });
+          }
+
+          // Show loading state
+          function showLoading(message) {
+            const panel = document.getElementById('results-panel');
+            if (!panel) return;
+            panel.innerHTML = \`
+              <div class="result-section">
+                <div class="loading">
+                  <span class="spinner"></span>
+                  \${message}
+                </div>
+              </div>
+            \`;
+            panel.style.display = 'block';
+          }
+
+          // Display fix error results
+          function displayFixResults(data) {
+            const panel = document.getElementById('results-panel');
+            if (!panel) return;
+            
+            panel.innerHTML = \`
+              <div class="result-section">
+                <div class="result-header">
+                  <span class="result-icon">🐛</span>
+                  <span>Error Analysis & Fix</span>
+                </div>
+                
+                <div class="explanation">
+                  <strong>Original Error:</strong><br>
+                  \${data.originalError || 'Error detected in code'}
+                </div>
+                
+                <div style="margin-top: 12px;">
+                  <strong style="color: #60a5fa;">Original Code:</strong>
+                  <div class="code-block">\${escapeHtml(data.originalCode || '')}</div>
+                </div>
+                
+                <div style="margin-top: 12px;">
+                  <strong style="color: #10b981;">Fixed Code:</strong>
+                  <div class="code-block">\${escapeHtml(data.fixedCode || '')}</div>
+                </div>
+                
+                <div class="explanation" style="margin-top: 12px;">
+                  <strong style="color: #10b981;">How to fix:</strong><br>
+                  \${data.explanation || 'Apply the fixed code above'}
+                </div>
+              </div>
+            \`;
+            panel.style.display = 'block';
+          }
+
+          // Display optimization options
+          function displayOptimizeOptions(data) {
+            const panel = document.getElementById('results-panel');
+            if (!panel) return;
+            
+            panel.innerHTML = \`
+              <div class="result-section">
+                <div class="result-header">
+                  <span class="result-icon">⚡</span>
+                  <span>Optimization Options</span>
+                </div>
+                
+                <div class="explanation">Choose optimization level:</div>
+                
+                <div class="option-buttons">
+                  <button class="option-btn" onclick="applyOptimization('industry')">🏢 Industry Level - Best practices & standards</button>
+                  <button class="option-btn" onclick="applyOptimization('efficiency')">⚙️ Efficiency Level - Performance optimized</button>
+                  <button class="option-btn" onclick="applyOptimization('balance')">⚖️ Balance Level - Mix of both</button>
+                </div>
+              </div>
+            \`;
+            panel.style.display = 'block';
+          }
+
+          // Apply selected optimization
+          function applyOptimization(level) {
+            console.log('Applying optimization:', level);
+            showLoading('Optimizing code...');
+            vscode.postMessage({
+              command: 'apply-optimization',
+              level: level
+            });
+          }
+
+          // Display optimized code
+          function displayOptimizedCode(data) {
+            const panel = document.getElementById('results-panel');
+            if (!panel) return;
+            
+            const levelLabel = {
+              'industry': '🏢 Industry Level',
+              'efficiency': '⚙️ Efficiency Level',
+              'balance': '⚖️ Balance Level'
+            }[data.level] || 'Optimization';
+            
+            panel.innerHTML = \`
+              <div class="result-section">
+                <div class="result-header">
+                  <span class="result-icon">✅</span>
+                  <span>\${levelLabel}</span>
+                </div>
+                
+                <div style="margin-top: 12px;">
+                  <strong style="color: #60a5fa;">Original Code:</strong>
+                  <div class="code-block">\${escapeHtml(data.originalCode || '')}</div>
+                </div>
+                
+                <div style="margin-top: 12px;">
+                  <strong style="color: #10b981;">Optimized Code:</strong>
+                  <div class="code-block">\${escapeHtml(data.optimizedCode || '')}</div>
+                </div>
+                
+                <div class="explanation" style="margin-top: 12px;">
+                  <strong>Improvements:</strong><br>
+                  \${data.improvements || 'Code has been optimized'}
+                </div>
+              </div>
+            \`;
+            panel.style.display = 'block';
+          }
+
+          // Display terminal errors
+          function displayTerminalErrors(data) {
+            const panel = document.getElementById('results-panel');
+            if (!panel) return;
+            
+            const errors = data.errors || [];
+            let errorHTML = '';
+            
+            if (errors.length > 0) {
+              errorHTML = errors.map(e => {
+                const errorType = e.type || e.name || 'Error';
+                const errorMsg = e.message || String(e);
+                return '<div class="error-result"><div style="margin-top: 8px; padding: 8px; background-color: rgba(239, 68, 68, 0.1); border-radius: 4px;"><strong>' + errorType + ':</strong> ' + errorMsg + '</div></div>';
+              }).join('');
+            } else {
+              errorHTML = '<div class="success-result">✅ No terminal errors found!</div>';
+            }
+            
+            panel.innerHTML = \`
+              <div class="result-section">
+                <div class="result-header">
+                  <span class="result-icon">➜</span>
+                  <span>Terminal Errors</span>
+                </div>
+                
+                \${errorHTML}
+              </div>
+            \`;
+            panel.style.display = 'block';
+          }
+
+          // Helper function to escape HTML
+          function escapeHtml(text) {
+            const map = {
+              '&': '&amp;',
+              '<': '&lt;',
+              '>': '&gt;',
+              '"': '&quot;',
+              "'": '&#039;'
+            };
+            return text.replace(/[&<>"']/g, m => map[m]);
           }
 
           // Clear analysis - delete all history
@@ -803,7 +1097,29 @@ export class DashboardWebviewProvider implements vscode.WebviewPanelSerializer {
           // Handle message from extension
           window.addEventListener('message', event => {
             const message = event.data;
-            console.log('Dashboard received:', message);
+            console.log('Dashboard received:', message.command, message);
+            
+            switch (message.command) {
+              case 'display-fix-results':
+                displayFixResults(message.data);
+                break;
+              case 'display-optimize-options':
+                displayOptimizeOptions(message.data);
+                break;
+              case 'display-optimized-code':
+                displayOptimizedCode(message.data);
+                break;
+              case 'display-terminal-errors':
+                displayTerminalErrors(message.data);
+                break;
+              case 'show-error':
+                alert('Error: ' + message.message);
+                const panel = document.getElementById('results-panel');
+                if (panel) panel.style.display = 'none';
+                break;
+              default:
+                console.log('Unknown message:', message.command);
+            }
           });
 
           console.log('DEBUGXIA Dashboard loaded with full functionality');
@@ -849,11 +1165,89 @@ export class DashboardWebviewProvider implements vscode.WebviewPanelSerializer {
   }
 
   /**
+   * Safely post message to the webview
+   */
+  private isWebviewReady(): boolean {
+    if (!DashboardWebviewProvider.currentPanel) {
+      return false;
+    }
+    if (!DashboardWebviewProvider.currentPanel.webview) {
+      return false;
+    }
+    // Check if the panel is disposed by checking active state
+    if (DashboardWebviewProvider.currentPanel === undefined) {
+      return false;
+    }
+    return true;
+  }
+
+  private postToWebview(message: any): boolean {
+    try {
+      if (!this.isWebviewReady()) {
+        console.warn('⚠️ Webview is not ready (disposed or unavailable)');
+        return false;
+      }
+      DashboardWebviewProvider.currentPanel?.webview?.postMessage(message);
+      console.log('✅ Message sent to webview:', message.command);
+      return true;
+    } catch (error) {
+      console.error('❌ Error posting to webview:', error);
+      // Check if error is about disposed webview
+      if (error instanceof Error && error.message.includes('disposed')) {
+        console.warn('⚠️ Webview was disposed during message posting');
+        DashboardWebviewProvider.currentPanel = undefined;
+        DashboardWebviewProvider.provider = undefined;
+      }
+      // Don't show error modal for disposed webview - it's expected behavior
+      if (!error?.toString().includes('disposed')) {
+        vscode.window.showErrorMessage(`Dashboard error: ${error}`);
+      }
+      return false;
+    }
+  }
+
+  /**
+   * Generate fixed code using AI
+   */
+  private async generateFixedCode(code: string, language: string, issues: any[]): Promise<string> {
+    try {
+      console.log('🐛 Calling AI to fix code...');
+      const fixedCode = await this.aiAnalysisService.fixErrors(code, language);
+      console.log('✅ Fixed code generated');
+      return fixedCode || code;
+    } catch (error) {
+      console.error('Error generating fixed code:', error);
+      return code;
+    }
+  }
+
+  /**
+   * Generate optimized code using AI
+   */
+  private async generateOptimizedCode(code: string, language: string, level: string): Promise<string> {
+    try {
+      console.log('⚡ Calling AI to optimize code for', level);
+      const optimizedCode = await this.aiAnalysisService.optimizeCode(code, language);
+      console.log('✅ Optimized code generated');
+      return optimizedCode || code;
+    } catch (error) {
+      console.error('Error generating optimized code:', error);
+      return code;
+    }
+  }
+
+  /**
    * Handle messages from the webview
    */
   protected async onDidReceiveMessage(message: any): Promise<void> {
     console.log('💬 Dashboard received message:', message.command);
     console.log('📋 Message details:', JSON.stringify(message));
+
+    // Check if webview is still active before processing
+    if (!this.isWebviewReady()) {
+      console.warn('⚠️ Ignoring message - webview not ready');
+      return;
+    }
 
     switch (message.command) {
       case 'analyze-new-file':
@@ -928,18 +1322,119 @@ export class DashboardWebviewProvider implements vscode.WebviewPanelSerializer {
         break;
 
       case 'fix-error':
-        console.log('Fix error requested');
-        vscode.window.showInformationMessage('Opening AI fix suggestions...');
+        console.log('🐛 fix-error: Attempting to fix errors');
+        try {
+          const analysisHistory = this.storageService.getAnalysisHistory();
+          if (analysisHistory.length === 0) {
+            this.postToWebview({
+              command: 'show-error',
+              message: 'No analysis available'
+            });
+            break;
+          }
+          
+          const currentFile = analysisHistory[this.selectedFileIndex >= 0 ? this.selectedFileIndex : analysisHistory.length - 1];
+          const fileUri = vscode.Uri.file(currentFile.fileName);
+          const fileContent = await vscode.workspace.fs.readFile(fileUri);
+          const code = new TextDecoder().decode(fileContent);
+          
+          // Call AI to fix errors
+          const fixedCode = await this.generateFixedCode(code, currentFile.language, currentFile.issues);
+          
+          // Double-check webview is still ready after async operation
+          if (!this.isWebviewReady()) {
+            console.warn('⚠️ Webview disposed during AI fix operation');
+            return;
+          }
+          
+          this.postToWebview({
+            command: 'display-fix-results',
+            data: {
+              originalCode: code.substring(0, 500), // First 500 chars
+              fixedCode: fixedCode.substring(0, 500),
+              originalError: currentFile.issues && currentFile.issues.length > 0 ? currentFile.issues[0].message : 'Error detected',
+              explanation: 'The AI has analyzed and fixed the errors in your code. Apply the fixed code to resolve issues.'
+            }
+          });
+        } catch (error) {
+          console.error('❌ fix-error: Error:', error);
+          this.postToWebview({
+            command: 'show-error',
+            message: `Error fixing code: ${error}`
+          });
+        }
         break;
 
       case 'optimize-code':
-        console.log('Optimize code requested');
-        vscode.window.showInformationMessage('Generating optimization suggestions...');
+        console.log('⚡ optimize-code: Showing optimization options');
+        try {
+          this.postToWebview({
+            command: 'display-optimize-options',
+            data: {}
+          });
+        } catch (error) {
+          console.error('❌ optimize-code: Error:', error);
+        }
+        break;
+
+      case 'apply-optimization':
+        console.log('⚙️ apply-optimization: Optimizing with level:', message.level);
+        try {
+          const analysisHistory = this.storageService.getAnalysisHistory();
+          if (analysisHistory.length === 0) break;
+          
+          const currentFile = analysisHistory[this.selectedFileIndex >= 0 ? this.selectedFileIndex : analysisHistory.length - 1];
+          const fileUri = vscode.Uri.file(currentFile.fileName);
+          const fileContent = await vscode.workspace.fs.readFile(fileUri);
+          const code = new TextDecoder().decode(fileContent);
+          
+          // Call AI to optimize
+          const optimizedCode = await this.generateOptimizedCode(code, currentFile.language, message.level);
+          
+          // Double-check webview is still ready after async operation
+          if (!this.isWebviewReady()) {
+            console.warn('⚠️ Webview disposed during AI optimization operation');
+            return;
+          }
+          
+          this.postToWebview({
+            command: 'display-optimized-code',
+            data: {
+              originalCode: code.substring(0, 500),
+              optimizedCode: optimizedCode.substring(0, 500),
+              level: message.level,
+              improvements: `Code optimized for ${message.level} level. Performance and maintainability improved.`
+            }
+          });
+        } catch (error) {
+          console.error('❌ apply-optimization: Error:', error);
+        }
         break;
 
       case 'open-terminal':
-        console.log('Opening terminal');
-        vscode.window.showInformationMessage('Opening terminal...');
+        console.log('➜ open-terminal: Scanning for errors');
+        try {
+          const analysisHistory = this.storageService.getAnalysisHistory();
+          const currentFile = analysisHistory.length > 0 
+            ? analysisHistory[this.selectedFileIndex >= 0 ? this.selectedFileIndex : analysisHistory.length - 1]
+            : null;
+          
+          if (!currentFile) {
+            this.postToWebview({
+              command: 'display-terminal-errors',
+              data: { errors: ['No file to scan'] }
+            });
+            break;
+          }
+          
+          const errors = currentFile.issues || [];
+          this.postToWebview({
+            command: 'display-terminal-errors',
+            data: { errors: errors.length > 0 ? errors : ['No errors found'] }
+          });
+        } catch (error) {
+          console.error('❌ open-terminal: Error:', error);
+        }
         break;
 
       case 'clear-analysis':

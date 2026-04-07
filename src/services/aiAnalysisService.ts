@@ -1,6 +1,6 @@
 /**
  * AI Analysis Service
- * Uses OpenRouter API (gpt-4o-mini) for accurate code analysis
+ * Uses OpenRouter API (gpt-oss-120b:free - FREE & POWERFUL!) for code analysis
  * Local syntax detection for instant error scoring
  */
 
@@ -19,9 +19,9 @@ export class AIAnalysisService {
   private client: AxiosInstance;
   private apiKey: string;
   private apiUrl: string = "https://openrouter.ai/api/v1";
-  private model: string = "openai/gpt-4o-mini";
+  private model: string = "openai/gpt-oss-120b:free"; // 🔥 FREE & UNLIMITED!
   private analysisCache: Map<string, CodeAnalysis> = new Map();
-  private cacheTimeout: number = 5 * 60 * 1000; // 5 minutes
+  private cacheTimeout: number = 30 * 60 * 1000; // 30 minutes cache
 
   constructor(apiKey?: string) {
     // Load API key from environment variable or use provided value
@@ -29,7 +29,7 @@ export class AIAnalysisService {
     
     this.client = axios.create({
       baseURL: this.apiUrl,
-      timeout: 60000,
+      timeout: 45000, // 45s for free model
       headers: {
         "Authorization": `Bearer ${this.apiKey}`,
         "Content-Type": "application/json",

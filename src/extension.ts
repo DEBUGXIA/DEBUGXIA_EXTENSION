@@ -76,7 +76,8 @@ export function activate(context: vscode.ExtensionContext) {
     const dashboardProvider = new DashboardWebviewProvider(
       context.extensionUri,
       apiClient,
-      storageService
+      storageService,
+      aiAnalysisService
     );
     context.subscriptions.push(
       vscode.window.registerWebviewPanelSerializer(
@@ -232,7 +233,7 @@ function registerCommands(
             // Show dashboard
             const analysisCount = (await storageService.getAnalysisHistory()).length;
             vscode.window.showInformationMessage(`✅ Analysis complete! Showing file stats...`);
-            DashboardWebviewProvider.show(context.extensionUri, apiClient, storageService);
+            DashboardWebviewProvider.show(context.extensionUri, apiClient, storageService, aiAnalysisService);
             
             // Wait for panel to be ready
             await new Promise(r => setTimeout(r, 500));
@@ -339,7 +340,7 @@ function registerCommands(
             
             // Show dashboard with filtered error files
             vscode.window.showInformationMessage(`✅ Scan complete! Found ${(await storageService.getAnalysisHistory()).length} file(s) with errors`);
-            DashboardWebviewProvider.show(context.extensionUri, apiClient, storageService);
+            DashboardWebviewProvider.show(context.extensionUri, apiClient, storageService, aiAnalysisService);
             
             // Wait for panel to be ready
             await new Promise(r => setTimeout(r, 500));
@@ -358,7 +359,7 @@ function registerCommands(
       "aiCodeMentor.viewDashboard",
       () => {
         console.log("📊 Viewing Dashboard...");
-        DashboardWebviewProvider.show(context.extensionUri, apiClient, storageService);
+        DashboardWebviewProvider.show(context.extensionUri, apiClient, storageService, aiAnalysisService);
       }
     );
 
@@ -443,7 +444,7 @@ function registerCommands(
 
           // Show dashboard and refresh it with new data
           console.log("🎨 Opening dashboard...");
-          DashboardWebviewProvider.show(context.extensionUri, apiClient, storageService);
+          DashboardWebviewProvider.show(context.extensionUri, apiClient, storageService, aiAnalysisService);
           
           // Wait a moment for the panel to be ready, then update it
           await new Promise(r => setTimeout(r, 500));
