@@ -14,14 +14,12 @@ import { ExtensionConfig } from "./types";
 import { StorageService } from "./services/storageService";
 import { displayBanner, SCANNER_ACTIVE } from "./ascii";
 import { AIAnalysisService } from "./services/aiAnalysisService";
-import { ErrorScanner } from "./services/errorScanner";
 import { loadEnvFile } from "./envLoader";
 
 let apiClient: ApiClient;
 let errorDetector: ErrorDetector;
 let storageService: StorageService;
 let aiAnalysisService: AIAnalysisService;
-let errorScanner: ErrorScanner;
 let scannerTerminal: vscode.Terminal | undefined;
 
 export function activate(context: vscode.ExtensionContext) {
@@ -40,26 +38,25 @@ export function activate(context: vscode.ExtensionContext) {
 
     // Get configuration
     const config = getExtensionConfig();
-    console.log("📋 Configuration loaded:", { 
-      apiUrl: config.apiUrl, 
-      apiKey: config.apiKey ? "***configured***" : "⚠️ NOT SET",
-      enableAutoAnalysis: config.enableAutoAnalysis,
-      enableTerminalAnalysis: config.enableTerminalAnalysis 
-    });
-
-    if (!config.apiUrl || !config.apiKey) {
-      vscode.window.showWarningMessage(
-        'DEBUGXIA: API settings not configured. Some features may be limited. Check VS Code Settings > DEBUGXIA.'
-      );
-      console.warn("⚠️  API Configuration missing - some features will be disabled");
+    console.log("📋 Configuration loaded");
+    
+    // Check for API key from environment or settings
+    const apiKey = config.apiKey || process.env.OPENROUTER_API_KEY || "";
+    if (apiKey) {
+      console.log("✅ OpenRouter API key found - AI analysis enabled!");
+    } else {
+      console.log("ℹ️  No API key found. To enable AI error detection:");
+      console.log("   1. Get free API key from: https://openrouter.ai");
+      console.log("   2. Set environment variable: OPENROUTER_API_KEY=your_key");
+      console.log("   3. Or add in VS Code Settings > DEBUGXIA > apiKey");
+      console.log("   Extension will use local error detection for now.");
     }
 
     // Initialize services
     apiClient = new ApiClient(config.apiUrl || "http://localhost:8000", config.apiKey || "");
     aiAnalysisService = new AIAnalysisService(config.apiKey || "");
     errorDetector = new ErrorDetector();
-    errorScanner = new ErrorScanner(aiAnalysisService, storageService);
-    console.log("✅ API Client, AI Analysis Service, Error Detector, and Error Scanner initialized");
+    console.log("✅ API Client, AI Analysis Service, and Error Detector initialized");
 
     // Register UI providers
     const errorListProvider = new ErrorListProvider(errorDetector);
@@ -111,17 +108,7 @@ export function activate(context: vscode.ExtensionContext) {
       }
     });
 
-    // Listen to workspace folder changes - clear data when switching workspaces
-    const workspaceFolderListener = vscode.workspace.onDidChangeWorkspaceFolders(async (e) => {
-      if (e.added.length > 0 || e.removed.length > 0) {
-        console.log('📁 Workspace folders changed! Clearing session data...');
-        await storageService.clearAnalysisHistory();
-        await storageService.clearErrorHistory();
-        console.log('🧹 Session data cleared for new workspace');
-      }
-    });
-
-    context.subscriptions.push(configListener, workspaceFolderListener);
+    context.subscriptions.push(configListener);
     
     console.log("✨ DEBUGXIA Extension fully activated!");
     vscode.window.showInformationMessage("🚀 DEBUGXIA is ready! Press Ctrl+Shift+Z to analyze code.");
@@ -171,70 +158,196 @@ function registerCommands(
   try {
     console.log('📋 Registering essential commands...');
 
-    // Scan for Error Files (Ctrl+Shift+Z)
-    const scanErrorFilesCmd = vscode.commands.registerCommand(
+    // Scan or Analyze - triggered by Ctrl+Shift+Z
+    const scanWorkspaceCmd = vscode.commands.registerCommand(
       "aiCodeMentor.openChat",
       async () => {
         try {
-          console.log("🚀 Ctrl+Shift+Z: Starting error file scan...");
+          // Check if there's an active editor (user has a file open/selected)
+          const activeEditor = vscode.window.activeTextEditor;
           
-          // Show progress indicator
-          const progressResult = await vscode.window.withProgress(
-            {
-              location: vscode.ProgressLocation.Window,
-              title: "DEBUGXIA: Scanning for error files...",
-              cancellable: false,
-            },
-            async (progress) => {
-              try {
-                // Verify API key first
-                const config = getExtensionConfig();
-                if (!config.apiKey) {
-                  vscode.window.showErrorMessage('❌ API Key not configured! Please set OPENROUTER_API_KEY in settings.');
-                  return;
-                }
-                
-                console.log('✅ API Key found, starting scan...');
+          if (activeEditor) {
+            // User has a file selected - analyze ONLY that file
+            console.log("📄 Found active editor - analyzing single file:", activeEditor.document.fileName);
+            const filePath = activeEditor.document.fileName;
+            
+            await vscode.window.withProgress(
+              {
+                location: vscode.ProgressLocation.Notification,
+                title: "DEBUGXIA: Analyzing current file...",
+                cancellable: false,
+              },
+              async (progress) => {
+                progress.report({ increment: 0 });
                 
                 // Clear previous analysis
                 await storageService.clearAnalysisHistory();
-                console.log('🧹 Cleared previous analysis history');
+                await storageService.clearErrorHistory();
                 
-                // Scan for error files
-                const errorFiles = await errorScanner.scanForErrors((current, total) => {
-                  const percentage = Math.round((current / total) * 100);
-                  progress.report({ 
-                    increment: (current / total) * 100,
-                    message: `Scanned ${current}/${total} files...`
+                try {
+                  // Read file
+                  const uri = vscode.Uri.file(filePath);
+                  const fileContent = await vscode.workspace.fs.readFile(uri);
+                  const text = new TextDecoder().decode(fileContent);
+                  const fileName = path.basename(filePath);
+                  const language = path.extname(filePath).slice(1) || "text";
+                  const lines = text.split('\n').length;
+                  
+                  // Count functions and classes
+                  const functionCount = (text.match(/^(def|function|async function|class |interface |struct )/gm) || []).length;
+                  const classCount = (text.match(/^class /gm) || []).length;
+                  
+                  // Get AI analysis
+                  console.log(`🤖 Analyzing: ${fileName}`);
+                  const aiAnalysis = await aiAnalysisService.analyzeCode(text, language, fileName);
+                  
+                  // Save ALL files (error or correct)
+                  console.log(`📊 File: ${fileName} | Error Score: ${aiAnalysis.errorScore} | Quality: ${aiAnalysis.codeQualityScore}`);
+                  
+                  const analysisData = {
+                    fileName: filePath,
+                    displayName: fileName,
+                    language,
+                    lines,
+                    functions: functionCount,
+                    classes: classCount,
+                    errorScore: aiAnalysis.errorScore,
+                    codeQualityScore: aiAnalysis.codeQualityScore,
+                    optimizationScore: aiAnalysis.optimizationScore,
+                    summary: aiAnalysis.summary,
+                    issues: aiAnalysis.issues,
+                    suggestions: aiAnalysis.suggestions,
+                    timestamp: Date.now(),
+                  };
+                  
+                  await storageService.saveAnalysis(analysisData);
+                  progress.report({ increment: 100 });
+                } catch (error) {
+                  console.error(`❌ Error analyzing file:`, error);
+                  throw error;
+                }
+              }
+            );
+            
+            // Show dashboard
+            const analysisCount = (await storageService.getAnalysisHistory()).length;
+            vscode.window.showInformationMessage(`✅ Analysis complete! Showing file stats...`);
+            DashboardWebviewProvider.show(context.extensionUri, apiClient, storageService);
+            
+            // Wait for panel to be ready
+            await new Promise(r => setTimeout(r, 500));
+            DashboardWebviewProvider.updatePanel();
+            
+          } else {
+            // No active editor - scan entire workspace
+            console.log("🎨 No active editor - scanning entire workspace...");
+            
+            await vscode.window.withProgress(
+              {
+                location: vscode.ProgressLocation.Notification,
+                title: "DEBUGXIA: Scanning workspace...",
+                cancellable: false,
+              },
+              async (progress) => {
+                progress.report({ increment: 0 });
+                
+                // Clear previous analysis
+                await storageService.clearAnalysisHistory();
+                await storageService.clearErrorHistory();
+                
+                // Find all supported files  
+                const config = getExtensionConfig();
+                const supportedExtensions = config.supportedLanguages
+                  .filter(lang => lang === 'python' || lang === 'javascript' || lang === 'typescript')
+                  .map(lang => {
+                    if (lang === 'python') return 'py';
+                    if (lang === 'javascript') return 'js';
+                    if (lang === 'typescript') return 'ts';
+                    return lang;
                   });
-                });
                 
-                console.log(`✅ Scan complete! Found ${errorFiles.length} files with errors`);
+                const filePatterns = supportedExtensions.map(ext => `**/*.${ext}`);
+                console.log('🔍 Searching for files with patterns:', filePatterns);
                 
-                if (errorFiles.length === 0) {
-                  vscode.window.showInformationMessage('🎉 No errors found! Your codebase is clean.');
-                } else {
-                  vscode.window.showInformationMessage(`⚠️ Found ${errorFiles.length} file(s) with errors`);
+                let allFiles: vscode.Uri[] = [];
+                for (const pattern of filePatterns) {
+                  const files = await vscode.workspace.findFiles(pattern, '**/node_modules/**', 100);
+                  allFiles = allFiles.concat(files);
                 }
                 
-              } catch (error) {
-                console.error('❌ Error during scan:', error);
-                const errorMsg = error instanceof Error ? error.message : String(error);
-                vscode.window.showErrorMessage(`❌ Scan failed: ${errorMsg}`);
+                console.log(`📊 Found ${allFiles.length} total files`);
+                let filesWithErrors = 0;
+                let totalAnalyzed = 0;
+                
+                // Analyze each file
+                for (const fileUri of allFiles) {
+                  try {
+                    totalAnalyzed++;
+                    const percentage = Math.min(Math.round((totalAnalyzed / allFiles.length) * 100), 95);
+                    progress.report({ 
+                      increment: percentage - (totalAnalyzed - 1) / allFiles.length * 100,
+                      message: `Analyzing ${path.basename(fileUri.fsPath)}...`
+                    });
+                    
+                    // Read file
+                    const fileContent = await vscode.workspace.fs.readFile(fileUri);
+                    const text = new TextDecoder().decode(fileContent);
+                    const fileName = path.basename(fileUri.fsPath);
+                    const language = path.extname(fileUri.fsPath).slice(1) || "text";
+                    const lines = text.split('\n').length;
+                    
+                    // Count functions and classes
+                    const functionCount = (text.match(/^(def|function|async function|class |interface |struct )/gm) || []).length;
+                    const classCount = (text.match(/^class /gm) || []).length;
+                    
+                    // Get AI analysis
+                    console.log(`🤖 Analyzing: ${fileName}`);
+                    const aiAnalysis = await aiAnalysisService.analyzeCode(text, language, fileName);
+                    
+                    // Only save files with ERRORS (errorScore > 0)
+                    if (aiAnalysis.errorScore > 0 || (aiAnalysis.issues && aiAnalysis.issues.length > 0)) {
+                      filesWithErrors++;
+                      console.log(`⚠️ Found errors in: ${fileName} (error score: ${aiAnalysis.errorScore})`);
+                      
+                      const analysisData = {
+                        fileName: fileUri.fsPath,
+                        displayName: fileName,
+                        language,
+                        lines,
+                        functions: functionCount,
+                        classes: classCount,
+                        errorScore: aiAnalysis.errorScore,
+                        codeQualityScore: aiAnalysis.codeQualityScore,
+                        optimizationScore: aiAnalysis.optimizationScore,
+                        summary: aiAnalysis.summary,
+                        issues: aiAnalysis.issues,
+                        suggestions: aiAnalysis.suggestions,
+                        timestamp: Date.now(),
+                      };
+                      
+                      await storageService.saveAnalysis(analysisData);
+                    }
+                  } catch (error) {
+                    console.error(`❌ Error analyzing ${fileUri.fsPath}:`, error);
+                  }
+                }
+                
+                progress.report({ increment: 100 });
+                console.log(`✅ Scan complete: ${filesWithErrors} files with errors found out of ${totalAnalyzed} analyzed`);
               }
-            }
-          );
-          
-          // Show dashboard with error files
-          console.log("📊 Opening dashboard with error files...");
-          DashboardWebviewProvider.show(context.extensionUri, apiClient, storageService);
-          
-          // Wait for panel to be ready and update
-          await new Promise(r => setTimeout(r, 500));
-          DashboardWebviewProvider.updatePanel();
+            );
+            
+            // Show dashboard with filtered error files
+            vscode.window.showInformationMessage(`✅ Scan complete! Found ${(await storageService.getAnalysisHistory()).length} file(s) with errors`);
+            DashboardWebviewProvider.show(context.extensionUri, apiClient, storageService);
+            
+            // Wait for panel to be ready
+            await new Promise(r => setTimeout(r, 500));
+            DashboardWebviewProvider.updatePanel();
+          }
           
         } catch (error) {
-          console.error("❌ Error in Ctrl+Shift+Z handler:", error);
+          console.error("❌ Error scanning:", error);
           vscode.window.showErrorMessage(`Failed to scan: ${error}`);
         }
       }
@@ -346,27 +459,7 @@ function registerCommands(
       }
     );
 
-    context.subscriptions.push(scanErrorFilesCmd, viewDashboardCmd, analyzeFileCmd);
-    
-    // Clear All Analysis Cache Command
-    const clearCacheCmd = vscode.commands.registerCommand(
-      "debugxia.clearCache",
-      async () => {
-        try {
-          console.log("🧹 Clearing analysis cache...");
-          await storageService.clearAnalysisHistory();
-          await storageService.clearErrorHistory();
-          console.log("✅ Cache cleared");
-          vscode.window.showInformationMessage("✅ Analysis cache cleared! Refresh dashboard to see changes.");
-          DashboardWebviewProvider.updatePanel();
-        } catch (error) {
-          console.error("❌ Error clearing cache:", error);
-          vscode.window.showErrorMessage(`Error: ${error}`);
-        }
-      }
-    );
-    
-    context.subscriptions.push(clearCacheCmd);
+    context.subscriptions.push(scanWorkspaceCmd, viewDashboardCmd, analyzeFileCmd);
     console.log('✅ Essential commands registered');
 
   } catch (error) {
@@ -567,19 +660,9 @@ function initializeScannerTerminal(context: vscode.ExtensionContext) {
 }
 
 export function deactivate() {
-  console.log("🛑 DEBUGXIA extension deactivating...");
-  console.log("🧹 Clearing all session data...");
-  
-  // Clear all session-based storage
-  if (storageService) {
-    storageService.clearAnalysisHistory().catch(e => console.log("Error clearing analysis:", e));
-    storageService.clearErrorHistory().catch(e => console.log("Error clearing errors:", e));
-  }
-  
+  console.log("DEBUGXIA extension deactivated");
   if (scannerTerminal) {
     scannerTerminal.dispose();
   }
   errorDetector?.dispose();
-  
-  console.log("✅ DEBUGXIA extension deactivated - all session data cleared");
 }

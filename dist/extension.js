@@ -8829,7 +8829,7 @@ var require_mime_types = __commonJS({
   "node_modules/mime-types/index.js"(exports2) {
     "use strict";
     var db = require_mime_db();
-    var extname4 = require("path").extname;
+    var extname3 = require("path").extname;
     var EXTRACT_TYPE_REGEXP = /^\s*([^;\s]*)(?:;|\s|$)/;
     var TEXT_TYPE_REGEXP = /^text\//i;
     exports2.charset = charset;
@@ -8884,7 +8884,7 @@ var require_mime_types = __commonJS({
       if (!path5 || typeof path5 !== "string") {
         return false;
       }
-      var extension2 = extname4("x." + path5).toLowerCase().substr(1);
+      var extension2 = extname3("x." + path5).toLowerCase().substr(1);
       if (!extension2) {
         return false;
       }
@@ -11658,7 +11658,7 @@ __export(extension_exports, {
   deactivate: () => deactivate
 });
 module.exports = __toCommonJS(extension_exports);
-var vscode7 = __toESM(require("vscode"));
+var vscode6 = __toESM(require("vscode"));
 var path4 = __toESM(require("path"));
 
 // node_modules/axios/lib/helpers/bind.js
@@ -17846,8 +17846,8 @@ var ChatWebviewProvider = class _ChatWebviewProvider {
 
 // src/webviews/dashboardWebviewProvider.ts
 var vscode5 = __toESM(require("vscode"));
+var path2 = __toESM(require("path"));
 var DashboardWebviewProvider = class _DashboardWebviewProvider {
-  // Track currently selected file in dropdown
   constructor(extensionUri, apiClient2, storageService2) {
     this.extensionUri = extensionUri;
     this.apiClient = apiClient2;
@@ -17864,32 +17864,30 @@ var DashboardWebviewProvider = class _DashboardWebviewProvider {
       console.log("\u{1F50D} Discovering Python files in workspace...");
       const pythonFiles = await vscode5.workspace.findFiles("**/*.py", "**/node_modules/**", 100);
       const excludePatterns = [
-        /^test/i,
-        // test*.py
-        /test$/i,
-        // *test.py
-        /testfail/i,
-        // testfail*.py (demo/test files)
-        /demo/i,
-        // demo*.py
-        /sample/i,
-        // sample*.py
-        /^conftest/i,
+        /^test_.*\.py$/i,
+        // test_*.py (test infrastructure)
+        /.*_test\.py$/i,
+        // *_test.py (test infrastructure)
+        /^tests\.py$/i,
+        // tests.py (test infrastructure)
+        /^conftest\.py$/i,
         // conftest.py (pytest config)
-        /mock/i,
+        /mock.*\.py$/i,
         // mock*.py
-        /fixture/i,
-        // fixture*.py
-        /_old/i,
-        // *_old.py
-        /temp/i,
+        /.*mock\.py$/i,
+        // *mock.py
+        /temp.*\.py$/i,
         // temp*.py
-        /tmp/i,
+        /tmp.*\.py$/i,
         // tmp*.py
-        /example/i,
+        /\.test\./i,
+        // *.test.*
+        /example.*\.py$/i,
         // example*.py
-        /\btest\b/i
-        // any file with 'test' in name
+        /.*example\.py$/i,
+        // *example.py
+        /fixture.*\.py$/i
+        // fixture*.py
       ];
       const filteredFiles = pythonFiles.filter((file) => {
         const fileName = file.fsPath.split("\\").pop()?.split("/").pop() || "";
@@ -17912,7 +17910,6 @@ var DashboardWebviewProvider = class _DashboardWebviewProvider {
     if (_DashboardWebviewProvider.currentPanel) {
       _DashboardWebviewProvider.currentPanel.reveal(vscode5.ViewColumn.Beside);
       if (_DashboardWebviewProvider.provider) {
-        _DashboardWebviewProvider.provider.selectedFileIndex = -1;
         _DashboardWebviewProvider.provider.update();
       }
     } else {
@@ -17976,46 +17973,39 @@ var DashboardWebviewProvider = class _DashboardWebviewProvider {
     const userId = this.storageService.getUserId();
     const analytics = await this.apiClient.getUserAnalytics(userId);
     const errorHistory = this.storageService.getErrorHistory();
-    let analysisHistory = this.storageService.getAnalysisHistory();
-    const testFilePatterns = [
-      /^test/i,
-      /test$/i,
-      /testfail/i,
-      /demo/i,
-      /sample/i,
-      /fixture/i,
-      /mock/i,
-      /_old/i,
-      /temp/i,
-      /tmp/i,
-      /example/i,
-      /\btest\b/i
-    ];
-    analysisHistory = analysisHistory.filter((f) => {
-      const fileName = f.fileName ? f.fileName.split("\\").pop()?.split("/").pop() || "" : "";
-      return !testFilePatterns.some((pattern) => pattern.test(fileName));
-    });
+    const analysisHistory = this.storageService.getAnalysisHistory();
+    this.discoveredFiles = await this.discoverPythonFiles();
     const hasAnalysis = analysisHistory && analysisHistory.length > 0;
     const stats = hasAnalysis ? this.calculateAIStats(analysisHistory, errorHistory) : null;
-    const fileIndex = this.selectedFileIndex >= 0 && this.selectedFileIndex < analysisHistory.length ? this.selectedFileIndex : analysisHistory.length - 1;
-    const currentFile = hasAnalysis ? analysisHistory[fileIndex] : null;
+    const currentFile = hasAnalysis ? analysisHistory[analysisHistory.length - 1] : null;
     let fileListHtml = "";
     if (hasAnalysis) {
       fileListHtml = analysisHistory.map((f, idx) => {
         const fileName = f.fileName ? f.fileName.split("\\").pop().split("/").pop() : `File ${idx + 1}`;
-        const errorIcon = f.errorScore > 0 ? "\u26A0\uFE0F" : "\u2713";
-        const isSelected = idx === fileIndex ? "selected" : "";
-        return `<option value="analyzed-${idx}" ${isSelected}>${errorIcon} ${fileName}</option>`;
+        return `<option value="analyzed-${idx}">\u2713 ${fileName}</option>`;
       }).join("");
     }
-    const fileInfoContent = hasAnalysis && currentFile ? `
+    const analyzedPaths = new Set(analysisHistory.map((f) => f.fileName));
+    this.discoveredFiles.forEach((file) => {
+      const fsPath = file.fsPath;
+      if (!analyzedPaths.has(fsPath)) {
+        const fileName = fsPath.split("\\").pop()?.split("/").pop() || "Unknown";
+        fileListHtml += `<option value="file-${fsPath}">\u{1F4C4} ${fileName}</option>`;
+      }
+    });
+    let fileToDisplay = currentFile;
+    if (hasAnalysis && this.selectedFileIndex >= 0 && this.selectedFileIndex < analysisHistory.length) {
+      fileToDisplay = analysisHistory[this.selectedFileIndex];
+      console.log("\u{1F4CD} Displaying selected file:", fileToDisplay.fileName);
+    }
+    const fileInfoContent = hasAnalysis && fileToDisplay ? `
           <!-- File Info Card -->
           <div class="file-info-card">
             <div class="file-header">
               <div class="file-icon">\u{1F4C4}</div>
               <div class="file-details">
-                <div class="file-name">${currentFile.fileName ? currentFile.fileName.split("\\").pop().split("/").pop() : "Unknown file"}</div>
-                <div class="file-stats">${currentFile.lines || 0} lines | ${currentFile.functions || 0} function | ${currentFile.classes || 0} classes</div>
+                <div class="file-name">${fileToDisplay.fileName ? fileToDisplay.fileName.split("\\").pop().split("/").pop() : "Unknown file"}</div>
+                <div class="file-stats">${fileToDisplay.lines || 0} lines | ${fileToDisplay.functions || 0} function | ${fileToDisplay.classes || 0} classes</div>
               </div>
             </div>
 
@@ -18023,58 +18013,34 @@ var DashboardWebviewProvider = class _DashboardWebviewProvider {
             <div class="stats-grid">
               <div class="stat-card">
                 <div class="stat-title">Error Score</div>
-                <div class="stat-value">${stats ? stats.errorScore : 0}</div>
+                <div class="stat-value">${fileToDisplay.errorScore || 0}</div>
               </div>
               <div class="stat-card">
                 <div class="stat-title">Code Quality</div>
-                <div class="stat-value">${stats ? stats.codeQualityScore : 0}</div>
+                <div class="stat-value">${fileToDisplay.codeQualityScore || 0}</div>
               </div>
               <div class="stat-card">
                 <div class="stat-title">Optimization</div>
-                <div class="stat-value">${stats ? stats.optimizationScore : 0}</div>
+                <div class="stat-value">${fileToDisplay.optimizationScore || 0}</div>
               </div>
             </div>
 
             <!-- Analysis Summary -->
             <div class="analysis-section">
               <div class="section-header">
-                <div class="section-icon">\u{1F4DD}</div>
-                <div class="section-title">Analysis Summary</div>
+                <div class="section-icon">${fileToDisplay.errorScore > 0 ? "\u26A0\uFE0F" : "\u2705"}</div>
+                <div class="section-title">${fileToDisplay.errorScore > 0 ? "Issues Found" : "Code Status"}</div>
               </div>
-              <div class="section-text">${(() => {
-      let summary = currentFile.summary || "No analysis available";
-      const firstSentence = summary.split(/[.!?]/)[0];
-      return firstSentence.substring(0, 120) + (firstSentence.length > 120 ? "..." : ".");
-    })()}</div>
+              <div class="section-text">${fileToDisplay.errorScore > 0 ? fileToDisplay.summary || "Issues detected in this file" : "\u2705 Code is correct! No errors found."}</div>
             </div>
 
             <!-- Issues Found -->
             <div class="issues-section">
               <div class="issues-header">
                 <div class="section-icon">\u26A0\uFE0F</div>
-                <div class="issues-title">Issues Found (${currentFile.issues ? currentFile.issues.length : 0})</div>
+                <div class="issues-title">Issues Found (${fileToDisplay.issues ? fileToDisplay.issues.length : 0})</div>
               </div>
-              <div class="issues-list">${currentFile.issues && currentFile.issues.length > 0 ? currentFile.issues.slice(0, 3).map((issue, idx) => {
-      let lineNum = "";
-      let issueText = "";
-      let fixText = "";
-      if (typeof issue === "object" && issue !== null) {
-        lineNum = issue.line ? ` Line ${issue.line}` : "";
-        issueText = issue.issue || issue.message || "";
-        fixText = issue.fix ? ` \u2192 ${issue.fix}` : "";
-      } else if (typeof issue === "string") {
-        const lineMatch = issue.match(/Line\s+(\d+)/i);
-        lineNum = lineMatch ? ` Line ${lineMatch[1]}` : "";
-        issueText = issue.replace(/Line\s+\d+[\s:]*/i, "").trim();
-      } else {
-        issueText = String(issue);
-      }
-      const maxLen = 80;
-      if (issueText.length > maxLen) {
-        issueText = issueText.substring(0, maxLen) + "...";
-      }
-      return '<div class="issue-item">' + (lineNum ? '<span style="color: #60a5fa; font-weight: 600;">' + lineNum + ":</span> " : "") + issueText + "</div>";
-    }).join("") + (currentFile.issues.length > 3 ? `<div class="issue-item" style="color: #999; padding-top: 8px;">+ ${currentFile.issues.length - 3} more issue${currentFile.issues.length > 4 ? "s" : ""}</div>` : "") : '<div class="issue-item">No issues found in this file</div>'}</div>
+              <div class="issues-list">${fileToDisplay.issues && fileToDisplay.issues.length > 0 ? fileToDisplay.issues.map((e) => `<div class="issue-item">\u2022 ${e.message || e.type || "Unknown issue"}</div>`).join("") : '<div class="issue-item">No issues found in this file</div>'}</div>
             </div>
 
             <!-- Action Buttons -->
@@ -18096,10 +18062,17 @@ var DashboardWebviewProvider = class _DashboardWebviewProvider {
     ` : `
           <!-- Empty State -->
           <div class="empty-state">
-            <div class="empty-icon">\uFFFD</div>
-            <div class="empty-title">Scan Your Codebase for Errors</div>
-            <div class="empty-text">Press <strong>Ctrl+Shift+Z</strong> to scan all files and detect errors using AI analysis.</div>
-            <div class="empty-text" style="font-size: 12px; color: #6B7280; margin-top: 8px;">The scan will use your API key to analyze code and find all error files in your workspace.</div>
+            <div class="empty-icon">\u{1F4CA}</div>
+            <div class="empty-title">No Files Analyzed Yet</div>
+            <div class="empty-text">Select a file and press Ctrl+Shift+Z to analyze it, or press Ctrl+Shift+Z with no file selected to scan workspace</div>
+            <div style="margin-top: 24px; padding: 12px; background-color: rgba(2, 170, 233, 0.1); border-left: 3px solid #02AAE9; border-radius: 4px; text-align: left; max-width: 100%;">
+              <div style="font-size: 12px; color: #60a5fa; font-weight: 500; margin-bottom: 6px;">\u{1F4A1} How to use</div>
+              <div style="font-size: 12px; color: #9CA3AF; line-height: 1.5;">
+                <strong>Single File:</strong> Open a file and press Ctrl+Shift+Z<br>
+                <strong>Workspace:</strong> Press Ctrl+Shift+Z with no file open<br>
+                Shows ALL files - both errors and clean code stats
+              </div>
+            </div>
           </div>
     `;
     return `
@@ -18258,33 +18231,6 @@ var DashboardWebviewProvider = class _DashboardWebviewProvider {
             transform: scale(0.95);
           }
 
-          .refresh-btn {
-            background-color: transparent;
-            border: 2px solid #6B7280;
-            border-radius: 6px;
-            padding: 6px 10px;
-            cursor: pointer;
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 16px;
-            transition: all 0.2s ease;
-            min-width: 40px;
-            min-height: 40px;
-          }
-
-          .refresh-btn:hover {
-            background-color: rgba(59, 130, 246, 0.2);
-            border-color: #3b82f6;
-            transform: rotate(180deg);
-          }
-
-          .refresh-btn:active {
-            background-color: rgba(59, 130, 246, 0.3);
-            transform: rotate(180deg) scale(0.95);
-          }
-
           .file-info-card {
             background-color: #0f0f0f;
             border: 2px solid #6B7280;
@@ -18398,13 +18344,6 @@ var DashboardWebviewProvider = class _DashboardWebviewProvider {
             font-size: 14px;
             color: #9CA3AF;
             letter-spacing: 0.3px;
-            line-height: 1.5;
-            max-height: 60px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
           }
 
           .issues-section {
@@ -18500,13 +18439,6 @@ var DashboardWebviewProvider = class _DashboardWebviewProvider {
             color: #D1D5DB;
             padding: 6px 0;
             letter-spacing: 0.3px;
-            line-height: 1.4;
-            max-height: 40px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            display: -webkit-box;
-            -webkit-line-clamp: 1;
-            -webkit-box-orient: vertical;
           }
 
           .empty-state {
@@ -18548,9 +18480,7 @@ var DashboardWebviewProvider = class _DashboardWebviewProvider {
           <!-- Header -->
           <div class="header">
             <div class="logo-text">DEBUGXIA</div>
-            <div style="display: flex; gap: 12px; align-items: center;">
-              <div class="issue-badge">${hasAnalysis && currentFile && currentFile.issues ? currentFile.issues.length : 0} issue${(hasAnalysis && currentFile && currentFile.issues ? currentFile.issues.length : 0) !== 1 ? "s" : ""}</div>
-            </div>
+            <div class="issue-badge">${errorHistory.length} issue${errorHistory.length !== 1 ? "s" : ""}</div>
           </div>
 
           <!-- File Selector -->
@@ -18567,6 +18497,7 @@ var DashboardWebviewProvider = class _DashboardWebviewProvider {
               <span>\u{1F50D}</span>
               <span>Browse</span>
             </button>
+            <button class="trash-btn" onclick="clearAnalysis()">\u{1F5D1}\uFE0F</button>
           </div>
 
           ${fileInfoContent}
@@ -18581,10 +18512,8 @@ var DashboardWebviewProvider = class _DashboardWebviewProvider {
             console.log('\u2705 VS Code API acquired successfully');
           } catch (error) {
             console.error('\u274C Failed to acquire VS Code API:', error);
-            vscode = null;
           }
 
-          // Refresh dashboard
           // Attach file select dropdown handler immediately (not waiting for DOMContentLoaded)
           function attachFileSelectListener() {
             const fileSelect = document.querySelector('.file-select');
@@ -18662,6 +18591,19 @@ var DashboardWebviewProvider = class _DashboardWebviewProvider {
           }
 
           // Clear analysis - delete all history
+          function clearAnalysis() {
+            console.log('\u{1F5D1}\uFE0F clearAnalysis() called');
+            const confirmed = confirm('\u{1F5D1}\uFE0F Delete all analysis? This cannot be undone.');
+            if (confirmed) {
+              console.log('\u2705 User confirmed - sending clear-analysis command');
+              vscode.postMessage({
+                command: 'clear-analysis'
+              });
+            } else {
+              console.log('\u274C User cancelled delete');
+            }
+          }
+
           // Handle message from extension
           window.addEventListener('message', event => {
             const message = event.data;
@@ -18709,7 +18651,6 @@ var DashboardWebviewProvider = class _DashboardWebviewProvider {
         try {
           const result = await vscode5.commands.executeCommand("debugxia.analyzeFile", message.filePath);
           console.log("\u2705 analyze-new-file: Analysis executed, result:", result);
-          this.selectedFileIndex = -1;
         } catch (error) {
           console.error("\u274C analyze-new-file: Error analyzing file:", error);
           vscode5.window.showErrorMessage(`Error analyzing file: ${error}`);
@@ -18724,33 +18665,42 @@ var DashboardWebviewProvider = class _DashboardWebviewProvider {
             canSelectFolders: false,
             filters: {
               "Python files": ["py"],
+              "JavaScript/TypeScript": ["js", "ts"],
               "All files": ["*"]
             },
-            title: "Select Python file to analyze"
+            title: "Select file to analyze"
           });
           console.log("\u{1F4CB} File picker returned:", fileUri);
           if (fileUri && fileUri[0]) {
             const selectedFile = fileUri[0].fsPath;
             console.log("\u2705 User selected file:", selectedFile);
-            console.log("\u{1F4DD} browse-files: Executing analyzeFile command with:", selectedFile);
-            const result = await vscode5.commands.executeCommand("debugxia.analyzeFile", selectedFile);
-            console.log("\u2705 browse-files: analyzeFile executed, result:", result);
-            this.selectedFileIndex = -1;
+            try {
+              vscode5.window.showInformationMessage(`Analyzing ${path2.basename(selectedFile)}...`, {
+                modal: false,
+                detail: "Please wait while we analyze this file."
+              });
+              console.log("\u{1F4DD} browse-files: Executing analyzeFile command with:", selectedFile);
+              const result = await vscode5.commands.executeCommand("debugxia.analyzeFile", selectedFile);
+              console.log("\u2705 browse-files: analyzeFile executed, result:", result);
+            } catch (analysisError) {
+              console.error("\u274C Error during file analysis:", analysisError);
+              vscode5.window.showErrorMessage(`Analysis failed: ${analysisError}`);
+            }
           } else {
             console.log("\u274C browse-files: No file selected by user");
+            vscode5.window.showInformationMessage("No file selected");
           }
         } catch (error) {
           console.error("\u274C browse-files: Error in browse-files:", error);
-          vscode5.window.showErrorMessage(`Error browsing files: ${error}`);
+          vscode5.window.showErrorMessage(`Error browsing files: ${error instanceof Error ? error.message : String(error)}`);
         }
         break;
       case "select-file":
         const analysisHistory = this.storageService.getAnalysisHistory();
         if (message.fileIndex >= 0 && message.fileIndex < analysisHistory.length) {
           const selectedFile = analysisHistory[message.fileIndex];
-          console.log("\u{1F4C1} Selected file:", selectedFile.fileName);
+          console.log("\u2705 Selected file:", selectedFile.fileName);
           this.selectedFileIndex = message.fileIndex;
-          console.log("\u2705 selectedFileIndex set to:", this.selectedFileIndex);
           await this.update();
         }
         break;
@@ -18767,33 +18717,18 @@ var DashboardWebviewProvider = class _DashboardWebviewProvider {
         vscode5.window.showInformationMessage("Opening terminal...");
         break;
       case "clear-analysis":
-        console.log("\u{1F5D1}\uFE0F clear-analysis: Starting deletion...");
+        console.log("\u{1F5D1}\uFE0F clear-analysis: Clearing analysis history");
         try {
-          console.log("\u{1F4DD} Before clear - Analysis count:", this.storageService.getAnalysisHistory().length);
           await this.storageService.clearAnalysisHistory();
           await this.storageService.clearErrorHistory();
           console.log("\u2705 clear-analysis: Storage cleared");
-          console.log("\u{1F4DD} After clear - Analysis count:", this.storageService.getAnalysisHistory().length);
-          this.selectedFileIndex = -1;
           await new Promise((r) => setTimeout(r, 100));
-          console.log("\u{1F504} Updating dashboard view...");
           await this.update();
-          console.log("\u2705 clear-analysis: Dashboard updated successfully");
-          vscode5.window.showInformationMessage("\u2705 All analyzed files deleted");
+          console.log("\u2705 clear-analysis: Dashboard refreshed");
+          vscode5.window.showInformationMessage("\u2705 All analysis cleared");
         } catch (error) {
           console.error("\u274C clear-analysis: Error:", error);
           vscode5.window.showErrorMessage(`Error clearing analysis: ${error}`);
-        }
-        break;
-      case "refresh-dashboard":
-        console.log("\u{1F504} refresh-dashboard: Refreshing dashboard");
-        try {
-          this.selectedFileIndex = -1;
-          await this.update();
-          console.log("\u2705 refresh-dashboard: Dashboard refreshed");
-        } catch (error) {
-          console.error("\u274C refresh-dashboard: Error:", error);
-          vscode5.window.showErrorMessage(`Error refreshing: ${error}`);
         }
         break;
       default:
@@ -18937,164 +18872,6 @@ function displayBanner() {
 ${SCANNER_STARTING}`;
 }
 
-// src/services/errorScanner.ts
-var vscode6 = __toESM(require("vscode"));
-var path2 = __toESM(require("path"));
-var ErrorScanner = class {
-  constructor(aiAnalysisService2, storageService2) {
-    this.aiAnalysisService = aiAnalysisService2;
-    this.storageService = storageService2;
-    this.isScanning = false;
-    this.scanResults = [];
-  }
-  /**
-   * Get all Python files from current workspace ONLY
-   */
-  async getPythonFiles() {
-    try {
-      console.log("\u{1F50D} Searching for Python files in workspace...");
-      if (!vscode6.workspace.workspaceFolders || vscode6.workspace.workspaceFolders.length === 0) {
-        console.warn("\u26A0\uFE0F No workspace folder is open");
-        vscode6.window.showErrorMessage("\u274C No workspace folder open! Please open a folder first.");
-        return [];
-      }
-      const workspacePath = vscode6.workspace.workspaceFolders[0].uri.fsPath;
-      console.log("\u{1F4C1} Workspace path:", workspacePath);
-      const pythonFiles = await vscode6.workspace.findFiles("**/*.py", "**/node_modules/**", 100);
-      const workspaceFiles = pythonFiles.filter((file) => {
-        const isInWorkspace = file.fsPath.startsWith(workspacePath);
-        if (!isInWorkspace) {
-          console.log(`\u26A0\uFE0F Skipping file outside workspace: ${file.fsPath}`);
-        }
-        return isInWorkspace;
-      });
-      console.log(`\u{1F4CA} Found ${pythonFiles.length} Python files, ${workspaceFiles.length} in workspace`);
-      const excludePatterns = [
-        /^test/i,
-        // test*.py
-        /test$/i,
-        // *test.py
-        /testfail/i,
-        // testfail*.py (demo files)
-        /demo/i,
-        // demo*.py
-        /sample/i,
-        // sample*.py
-        /fixture/i,
-        // fixture*.py
-        /mock/i,
-        // mock*.py
-        /_old/i,
-        // *_old.py
-        /temp/i,
-        // temp*.py
-        /tmp/i,
-        // tmp*.py
-        /\btest\b/i
-        // any file with 'test' in name
-      ];
-      const filteredFiles = workspaceFiles.filter((file) => {
-        const fileName = file.fsPath.split("\\").pop()?.split("/").pop() || "";
-        return !excludePatterns.some((pattern) => pattern.test(fileName));
-      });
-      console.log(`\u2705 Filtered to ${filteredFiles.length} production files for scanning`);
-      return filteredFiles;
-    } catch (error) {
-      console.error("\u274C Error getting Python files:", error);
-      return [];
-    }
-  }
-  /**
-   * Scan all files for errors
-   */
-  async scanForErrors(onProgress) {
-    if (this.isScanning) {
-      console.warn("\u26A0\uFE0F Scan already in progress");
-      return [];
-    }
-    this.isScanning = true;
-    this.scanResults = [];
-    try {
-      console.log("\u{1F680} Starting error scan...");
-      const files = await this.getPythonFiles();
-      if (files.length === 0) {
-        console.log("\u26A0\uFE0F No Python files found to scan");
-        vscode6.window.showWarningMessage("No Python files found in workspace");
-        this.isScanning = false;
-        return [];
-      }
-      console.log(`\u{1F4CA} Scanning ${files.length} files for errors...`);
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        onProgress?.(i + 1, files.length);
-        try {
-          const fileContent = await vscode6.workspace.fs.readFile(file);
-          const text = new TextDecoder().decode(fileContent);
-          const fileName = path2.basename(file.fsPath);
-          const language = path2.extname(file.fsPath).slice(1) || "python";
-          console.log(`\u{1F50D} Analyzing [${i + 1}/${files.length}]: ${fileName}`);
-          const analysis = await this.aiAnalysisService.analyzeCode(text, language, fileName);
-          if (analysis.errorScore > 0) {
-            const report = {
-              filePath: file.fsPath,
-              fileName,
-              errorScore: analysis.errorScore,
-              issues: analysis.issues || [],
-              summary: analysis.summary || "File contains errors",
-              language,
-              timestamp: Date.now()
-            };
-            this.scanResults.push(report);
-            console.log(`\u26A0\uFE0F Found errors in ${fileName} (score: ${analysis.errorScore})`);
-            const lines = text.split("\n").length;
-            const functionCount = (text.match(/^def /gm) || []).length;
-            const classCount = (text.match(/^class /gm) || []).length;
-            await this.storageService.saveAnalysis({
-              fileName: file.fsPath,
-              displayName: fileName,
-              language,
-              lines,
-              functions: functionCount,
-              classes: classCount,
-              errorScore: analysis.errorScore,
-              codeQualityScore: analysis.codeQualityScore,
-              optimizationScore: analysis.optimizationScore,
-              summary: analysis.summary,
-              issues: analysis.issues,
-              suggestions: analysis.suggestions,
-              timestamp: Date.now()
-            });
-          } else {
-            console.log(`\u2705 No errors in ${fileName}`);
-          }
-        } catch (err) {
-          console.error(`\u274C Error analyzing ${file.fsPath}:`, err);
-        }
-      }
-      console.log(`
-\u2705 Scan complete! Found ${this.scanResults.length} files with errors`);
-      this.isScanning = false;
-      return this.scanResults;
-    } catch (error) {
-      console.error("\u274C Error during scan:", error);
-      this.isScanning = false;
-      throw error;
-    }
-  }
-  /**
-   * Get last scan results
-   */
-  getResults() {
-    return this.scanResults;
-  }
-  /**
-   * Check if scan is in progress
-   */
-  isScanning_() {
-    return this.isScanning;
-  }
-};
-
 // src/envLoader.ts
 var fs = __toESM(require("fs"));
 var path3 = __toESM(require("path"));
@@ -19134,7 +18911,6 @@ var apiClient;
 var errorDetector;
 var storageService;
 var aiAnalysisService;
-var errorScanner;
 var scannerTerminal;
 function activate(context) {
   try {
@@ -19145,25 +18921,23 @@ function activate(context) {
     storageService = new StorageService(context);
     console.log("\u2705 Storage Service initialized");
     const config = getExtensionConfig();
-    console.log("\u{1F4CB} Configuration loaded:", {
-      apiUrl: config.apiUrl,
-      apiKey: config.apiKey ? "***configured***" : "\u26A0\uFE0F NOT SET",
-      enableAutoAnalysis: config.enableAutoAnalysis,
-      enableTerminalAnalysis: config.enableTerminalAnalysis
-    });
-    if (!config.apiUrl || !config.apiKey) {
-      vscode7.window.showWarningMessage(
-        "DEBUGXIA: API settings not configured. Some features may be limited. Check VS Code Settings > DEBUGXIA."
-      );
-      console.warn("\u26A0\uFE0F  API Configuration missing - some features will be disabled");
+    console.log("\u{1F4CB} Configuration loaded");
+    const apiKey = config.apiKey || process.env.OPENROUTER_API_KEY || "";
+    if (apiKey) {
+      console.log("\u2705 OpenRouter API key found - AI analysis enabled!");
+    } else {
+      console.log("\u2139\uFE0F  No API key found. To enable AI error detection:");
+      console.log("   1. Get free API key from: https://openrouter.ai");
+      console.log("   2. Set environment variable: OPENROUTER_API_KEY=your_key");
+      console.log("   3. Or add in VS Code Settings > DEBUGXIA > apiKey");
+      console.log("   Extension will use local error detection for now.");
     }
     apiClient = new ApiClient(config.apiUrl || "http://localhost:8000", config.apiKey || "");
     aiAnalysisService = new AIAnalysisService(config.apiKey || "");
     errorDetector = new ErrorDetector();
-    errorScanner = new ErrorScanner(aiAnalysisService, storageService);
-    console.log("\u2705 API Client, AI Analysis Service, Error Detector, and Error Scanner initialized");
+    console.log("\u2705 API Client, AI Analysis Service, and Error Detector initialized");
     const errorListProvider = new ErrorListProvider(errorDetector);
-    vscode7.window.registerTreeDataProvider("errorList", errorListProvider);
+    vscode6.window.registerTreeDataProvider("errorList", errorListProvider);
     console.log("\u2705 Error List Provider registered");
     const chatProvider = new ChatWebviewProvider(
       context.extensionUri,
@@ -19171,7 +18945,7 @@ function activate(context) {
       storageService
     );
     context.subscriptions.push(
-      vscode7.window.registerWebviewPanelSerializer("aiCodeMentor.chat", chatProvider)
+      vscode6.window.registerWebviewPanelSerializer("aiCodeMentor.chat", chatProvider)
     );
     console.log("\u2705 Chat Webview Provider registered");
     const dashboardProvider = new DashboardWebviewProvider(
@@ -19180,7 +18954,7 @@ function activate(context) {
       storageService
     );
     context.subscriptions.push(
-      vscode7.window.registerWebviewPanelSerializer(
+      vscode6.window.registerWebviewPanelSerializer(
         "aiCodeMentor.dashboard",
         dashboardProvider
       )
@@ -19188,31 +18962,23 @@ function activate(context) {
     console.log("\u2705 Dashboard Webview Provider registered");
     registerCommands(context, apiClient, errorDetector, errorListProvider);
     console.log("\u2705 Commands registered");
-    const configListener = vscode7.workspace.onDidChangeConfiguration((e) => {
+    const configListener = vscode6.workspace.onDidChangeConfiguration((e) => {
       if (e.affectsConfiguration("aiCodeMentor")) {
         const newConfig = getExtensionConfig();
         apiClient.setConfig(newConfig.apiUrl || "http://localhost:8000", newConfig.apiKey || "");
         console.log("\u{1F504} Configuration reloaded");
       }
     });
-    const workspaceFolderListener = vscode7.workspace.onDidChangeWorkspaceFolders(async (e) => {
-      if (e.added.length > 0 || e.removed.length > 0) {
-        console.log("\u{1F4C1} Workspace folders changed! Clearing session data...");
-        await storageService.clearAnalysisHistory();
-        await storageService.clearErrorHistory();
-        console.log("\u{1F9F9} Session data cleared for new workspace");
-      }
-    });
-    context.subscriptions.push(configListener, workspaceFolderListener);
+    context.subscriptions.push(configListener);
     console.log("\u2728 DEBUGXIA Extension fully activated!");
-    vscode7.window.showInformationMessage("\u{1F680} DEBUGXIA is ready! Press Ctrl+Shift+Z to analyze code.");
+    vscode6.window.showInformationMessage("\u{1F680} DEBUGXIA is ready! Press Ctrl+Shift+Z to analyze code.");
   } catch (error) {
     console.error("\u274C Failed to activate extension:", error);
-    vscode7.window.showErrorMessage(`Extension activation failed: ${error}`);
+    vscode6.window.showErrorMessage(`Extension activation failed: ${error}`);
   }
 }
 function getExtensionConfig() {
-  const config = vscode7.workspace.getConfiguration("aiCodeMentor");
+  const config = vscode6.workspace.getConfiguration("aiCodeMentor");
   return {
     apiUrl: config.get("apiUrl") || "http://localhost:8000",
     apiKey: config.get("apiKey") || process.env.OPENROUTER_API_KEY || "",
@@ -19236,74 +19002,169 @@ function getExtensionConfig() {
 function registerCommands(context, apiClient2, errorDetector2, errorListProvider) {
   try {
     console.log("\u{1F4CB} Registering essential commands...");
-    const scanErrorFilesCmd = vscode7.commands.registerCommand(
+    const scanWorkspaceCmd = vscode6.commands.registerCommand(
       "aiCodeMentor.openChat",
       async () => {
         try {
-          console.log("\u{1F680} Ctrl+Shift+Z: Starting error file scan...");
-          const progressResult = await vscode7.window.withProgress(
-            {
-              location: vscode7.ProgressLocation.Window,
-              title: "DEBUGXIA: Scanning for error files...",
-              cancellable: false
-            },
-            async (progress) => {
-              try {
-                const config = getExtensionConfig();
-                if (!config.apiKey) {
-                  vscode7.window.showErrorMessage("\u274C API Key not configured! Please set OPENROUTER_API_KEY in settings.");
-                  return;
-                }
-                console.log("\u2705 API Key found, starting scan...");
+          const activeEditor = vscode6.window.activeTextEditor;
+          if (activeEditor) {
+            console.log("\u{1F4C4} Found active editor - analyzing single file:", activeEditor.document.fileName);
+            const filePath = activeEditor.document.fileName;
+            await vscode6.window.withProgress(
+              {
+                location: vscode6.ProgressLocation.Notification,
+                title: "DEBUGXIA: Analyzing current file...",
+                cancellable: false
+              },
+              async (progress) => {
+                progress.report({ increment: 0 });
                 await storageService.clearAnalysisHistory();
-                console.log("\u{1F9F9} Cleared previous analysis history");
-                const errorFiles = await errorScanner.scanForErrors((current, total) => {
-                  const percentage = Math.round(current / total * 100);
-                  progress.report({
-                    increment: current / total * 100,
-                    message: `Scanned ${current}/${total} files...`
-                  });
-                });
-                console.log(`\u2705 Scan complete! Found ${errorFiles.length} files with errors`);
-                if (errorFiles.length === 0) {
-                  vscode7.window.showInformationMessage("\u{1F389} No errors found! Your codebase is clean.");
-                } else {
-                  vscode7.window.showInformationMessage(`\u26A0\uFE0F Found ${errorFiles.length} file(s) with errors`);
+                await storageService.clearErrorHistory();
+                try {
+                  const uri = vscode6.Uri.file(filePath);
+                  const fileContent = await vscode6.workspace.fs.readFile(uri);
+                  const text = new TextDecoder().decode(fileContent);
+                  const fileName = path4.basename(filePath);
+                  const language = path4.extname(filePath).slice(1) || "text";
+                  const lines = text.split("\n").length;
+                  const functionCount = (text.match(/^(def|function|async function|class |interface |struct )/gm) || []).length;
+                  const classCount = (text.match(/^class /gm) || []).length;
+                  console.log(`\u{1F916} Analyzing: ${fileName}`);
+                  const aiAnalysis = await aiAnalysisService.analyzeCode(text, language, fileName);
+                  console.log(`\u{1F4CA} File: ${fileName} | Error Score: ${aiAnalysis.errorScore} | Quality: ${aiAnalysis.codeQualityScore}`);
+                  const analysisData = {
+                    fileName: filePath,
+                    displayName: fileName,
+                    language,
+                    lines,
+                    functions: functionCount,
+                    classes: classCount,
+                    errorScore: aiAnalysis.errorScore,
+                    codeQualityScore: aiAnalysis.codeQualityScore,
+                    optimizationScore: aiAnalysis.optimizationScore,
+                    summary: aiAnalysis.summary,
+                    issues: aiAnalysis.issues,
+                    suggestions: aiAnalysis.suggestions,
+                    timestamp: Date.now()
+                  };
+                  await storageService.saveAnalysis(analysisData);
+                  progress.report({ increment: 100 });
+                } catch (error) {
+                  console.error(`\u274C Error analyzing file:`, error);
+                  throw error;
                 }
-              } catch (error) {
-                console.error("\u274C Error during scan:", error);
-                const errorMsg = error instanceof Error ? error.message : String(error);
-                vscode7.window.showErrorMessage(`\u274C Scan failed: ${errorMsg}`);
               }
-            }
-          );
-          console.log("\u{1F4CA} Opening dashboard with error files...");
-          DashboardWebviewProvider.show(context.extensionUri, apiClient2, storageService);
-          await new Promise((r) => setTimeout(r, 500));
-          DashboardWebviewProvider.updatePanel();
+            );
+            const analysisCount = (await storageService.getAnalysisHistory()).length;
+            vscode6.window.showInformationMessage(`\u2705 Analysis complete! Showing file stats...`);
+            DashboardWebviewProvider.show(context.extensionUri, apiClient2, storageService);
+            await new Promise((r) => setTimeout(r, 500));
+            DashboardWebviewProvider.updatePanel();
+          } else {
+            console.log("\u{1F3A8} No active editor - scanning entire workspace...");
+            await vscode6.window.withProgress(
+              {
+                location: vscode6.ProgressLocation.Notification,
+                title: "DEBUGXIA: Scanning workspace...",
+                cancellable: false
+              },
+              async (progress) => {
+                progress.report({ increment: 0 });
+                await storageService.clearAnalysisHistory();
+                await storageService.clearErrorHistory();
+                const config = getExtensionConfig();
+                const supportedExtensions = config.supportedLanguages.filter((lang) => lang === "python" || lang === "javascript" || lang === "typescript").map((lang) => {
+                  if (lang === "python")
+                    return "py";
+                  if (lang === "javascript")
+                    return "js";
+                  if (lang === "typescript")
+                    return "ts";
+                  return lang;
+                });
+                const filePatterns = supportedExtensions.map((ext) => `**/*.${ext}`);
+                console.log("\u{1F50D} Searching for files with patterns:", filePatterns);
+                let allFiles = [];
+                for (const pattern of filePatterns) {
+                  const files = await vscode6.workspace.findFiles(pattern, "**/node_modules/**", 100);
+                  allFiles = allFiles.concat(files);
+                }
+                console.log(`\u{1F4CA} Found ${allFiles.length} total files`);
+                let filesWithErrors = 0;
+                let totalAnalyzed = 0;
+                for (const fileUri of allFiles) {
+                  try {
+                    totalAnalyzed++;
+                    const percentage = Math.min(Math.round(totalAnalyzed / allFiles.length * 100), 95);
+                    progress.report({
+                      increment: percentage - (totalAnalyzed - 1) / allFiles.length * 100,
+                      message: `Analyzing ${path4.basename(fileUri.fsPath)}...`
+                    });
+                    const fileContent = await vscode6.workspace.fs.readFile(fileUri);
+                    const text = new TextDecoder().decode(fileContent);
+                    const fileName = path4.basename(fileUri.fsPath);
+                    const language = path4.extname(fileUri.fsPath).slice(1) || "text";
+                    const lines = text.split("\n").length;
+                    const functionCount = (text.match(/^(def|function|async function|class |interface |struct )/gm) || []).length;
+                    const classCount = (text.match(/^class /gm) || []).length;
+                    console.log(`\u{1F916} Analyzing: ${fileName}`);
+                    const aiAnalysis = await aiAnalysisService.analyzeCode(text, language, fileName);
+                    if (aiAnalysis.errorScore > 0 || aiAnalysis.issues && aiAnalysis.issues.length > 0) {
+                      filesWithErrors++;
+                      console.log(`\u26A0\uFE0F Found errors in: ${fileName} (error score: ${aiAnalysis.errorScore})`);
+                      const analysisData = {
+                        fileName: fileUri.fsPath,
+                        displayName: fileName,
+                        language,
+                        lines,
+                        functions: functionCount,
+                        classes: classCount,
+                        errorScore: aiAnalysis.errorScore,
+                        codeQualityScore: aiAnalysis.codeQualityScore,
+                        optimizationScore: aiAnalysis.optimizationScore,
+                        summary: aiAnalysis.summary,
+                        issues: aiAnalysis.issues,
+                        suggestions: aiAnalysis.suggestions,
+                        timestamp: Date.now()
+                      };
+                      await storageService.saveAnalysis(analysisData);
+                    }
+                  } catch (error) {
+                    console.error(`\u274C Error analyzing ${fileUri.fsPath}:`, error);
+                  }
+                }
+                progress.report({ increment: 100 });
+                console.log(`\u2705 Scan complete: ${filesWithErrors} files with errors found out of ${totalAnalyzed} analyzed`);
+              }
+            );
+            vscode6.window.showInformationMessage(`\u2705 Scan complete! Found ${(await storageService.getAnalysisHistory()).length} file(s) with errors`);
+            DashboardWebviewProvider.show(context.extensionUri, apiClient2, storageService);
+            await new Promise((r) => setTimeout(r, 500));
+            DashboardWebviewProvider.updatePanel();
+          }
         } catch (error) {
-          console.error("\u274C Error in Ctrl+Shift+Z handler:", error);
-          vscode7.window.showErrorMessage(`Failed to scan: ${error}`);
+          console.error("\u274C Error scanning:", error);
+          vscode6.window.showErrorMessage(`Failed to scan: ${error}`);
         }
       }
     );
-    const viewDashboardCmd = vscode7.commands.registerCommand(
+    const viewDashboardCmd = vscode6.commands.registerCommand(
       "aiCodeMentor.viewDashboard",
       () => {
         console.log("\u{1F4CA} Viewing Dashboard...");
         DashboardWebviewProvider.show(context.extensionUri, apiClient2, storageService);
       }
     );
-    const analyzeFileCmd = vscode7.commands.registerCommand(
+    const analyzeFileCmd = vscode6.commands.registerCommand(
       "debugxia.analyzeFile",
       async (filePath) => {
         try {
           console.log("\u{1F4DD} analyzeFileCmd triggered with filePath:", filePath);
           console.log("\u{1F4CA} Current analysis history:", storageService.getAnalysisHistory().length, "entries");
           if (!filePath) {
-            const editor = vscode7.window.activeTextEditor;
+            const editor = vscode6.window.activeTextEditor;
             if (!editor) {
-              vscode7.window.showErrorMessage("No active editor");
+              vscode6.window.showErrorMessage("No active editor");
               return;
             }
             filePath = editor.document.fileName;
@@ -19312,9 +19173,9 @@ function registerCommands(context, apiClient2, errorDetector2, errorListProvider
             filePath = filePath.replace("file-", "");
           }
           console.log("\u{1F50D} Analyzing file:", filePath);
-          vscode7.window.showInformationMessage(`Analyzing ${path4.basename(filePath)}... \u26A1`);
-          const uri = vscode7.Uri.file(filePath);
-          const fileContent = await vscode7.workspace.fs.readFile(uri);
+          vscode6.window.showInformationMessage(`Analyzing ${path4.basename(filePath)}... \u26A1`);
+          const uri = vscode6.Uri.file(filePath);
+          const fileContent = await vscode6.workspace.fs.readFile(uri);
           const text = new TextDecoder().decode(fileContent);
           const fileName = path4.basename(filePath);
           const language = path4.extname(filePath).slice(1) || "text";
@@ -19358,50 +19219,27 @@ function registerCommands(context, apiClient2, errorDetector2, errorListProvider
           DashboardWebviewProvider.show(context.extensionUri, apiClient2, storageService);
           await new Promise((r) => setTimeout(r, 500));
           DashboardWebviewProvider.updatePanel();
-          vscode7.window.showInformationMessage(`\u2705 Analysis complete for ${fileName}`);
+          vscode6.window.showInformationMessage(`\u2705 Analysis complete for ${fileName}`);
           console.log("\u2705 Analyze complete");
         } catch (error) {
           console.error("\u274C Error analyzing file:", error);
-          vscode7.window.showErrorMessage(`Error: ${error}`);
+          vscode6.window.showErrorMessage(`Error: ${error}`);
         }
       }
     );
-    context.subscriptions.push(scanErrorFilesCmd, viewDashboardCmd, analyzeFileCmd);
-    const clearCacheCmd = vscode7.commands.registerCommand(
-      "debugxia.clearCache",
-      async () => {
-        try {
-          console.log("\u{1F9F9} Clearing analysis cache...");
-          await storageService.clearAnalysisHistory();
-          await storageService.clearErrorHistory();
-          console.log("\u2705 Cache cleared");
-          vscode7.window.showInformationMessage("\u2705 Analysis cache cleared! Refresh dashboard to see changes.");
-          DashboardWebviewProvider.updatePanel();
-        } catch (error) {
-          console.error("\u274C Error clearing cache:", error);
-          vscode7.window.showErrorMessage(`Error: ${error}`);
-        }
-      }
-    );
-    context.subscriptions.push(clearCacheCmd);
+    context.subscriptions.push(scanWorkspaceCmd, viewDashboardCmd, analyzeFileCmd);
     console.log("\u2705 Essential commands registered");
   } catch (error) {
     console.error("\u274C Error registering commands:", error);
-    vscode7.window.showErrorMessage(`Failed to register commands: ${error}`);
+    vscode6.window.showErrorMessage(`Failed to register commands: ${error}`);
   }
 }
 function deactivate() {
-  console.log("\u{1F6D1} DEBUGXIA extension deactivating...");
-  console.log("\u{1F9F9} Clearing all session data...");
-  if (storageService) {
-    storageService.clearAnalysisHistory().catch((e) => console.log("Error clearing analysis:", e));
-    storageService.clearErrorHistory().catch((e) => console.log("Error clearing errors:", e));
-  }
+  console.log("DEBUGXIA extension deactivated");
   if (scannerTerminal) {
     scannerTerminal.dispose();
   }
   errorDetector?.dispose();
-  console.log("\u2705 DEBUGXIA extension deactivated - all session data cleared");
 }
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {

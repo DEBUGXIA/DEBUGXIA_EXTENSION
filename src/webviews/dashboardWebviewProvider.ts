@@ -4,6 +4,7 @@
  */
 
 import * as vscode from "vscode";
+import * as path from "path";
 import { ApiClient } from "../services/apiClient";
 import { StorageService } from "../services/storageService";
 
@@ -11,7 +12,7 @@ export class DashboardWebviewProvider implements vscode.WebviewPanelSerializer {
   private static currentPanel: vscode.WebviewPanel | undefined;
   private static provider: DashboardWebviewProvider | undefined;
   private discoveredFiles: vscode.Uri[] = [];
-  private selectedFileIndex: number = -1; // Track currently selected file in dropdown
+  private selectedFileIndex: number = -1;
 
   constructor(
     private extensionUri: vscode.Uri,
@@ -28,21 +29,21 @@ export class DashboardWebviewProvider implements vscode.WebviewPanelSerializer {
       console.log('🔍 Discovering Python files in workspace...');
       const pythonFiles = await vscode.workspace.findFiles('**/*.py', '**/node_modules/**', 100);
       
-      // Filter out test infrastructure files and temporary/demo files
+      // Filter out test infrastructure files and temporary files
+      // IMPORTANT: Allow files like testfail*.py and tests with actual code to run
       const excludePatterns = [
-        /^test/i,                    // test*.py
-        /test$/i,                    // *test.py
-        /testfail/i,                 // testfail*.py (demo/test files)
-        /demo/i,                     // demo*.py
-        /sample/i,                   // sample*.py
-        /^conftest/i,                // conftest.py (pytest config)
-        /mock/i,                     // mock*.py
-        /fixture/i,                  // fixture*.py
-        /_old/i,                     // *_old.py
-        /temp/i,                     // temp*.py
-        /tmp/i,                      // tmp*.py
-        /example/i,                  // example*.py
-        /\btest\b/i,                // any file with 'test' in name
+        /^test_.*\.py$/i,         // test_*.py (test infrastructure)
+        /.*_test\.py$/i,          // *_test.py (test infrastructure)
+        /^tests\.py$/i,           // tests.py (test infrastructure)
+        /^conftest\.py$/i,        // conftest.py (pytest config)
+        /mock.*\.py$/i,           // mock*.py
+        /.*mock\.py$/i,           // *mock.py
+        /temp.*\.py$/i,           // temp*.py
+        /tmp.*\.py$/i,            // tmp*.py
+        /\.test\./i,              // *.test.*
+        /example.*\.py$/i,        // example*.py
+        /.*example\.py$/i,        // *example.py
+        /fixture.*\.py$/i,        // fixture*.py
       ];
       
       const filteredFiles = pythonFiles.filter(file => {
@@ -77,8 +78,6 @@ export class DashboardWebviewProvider implements vscode.WebviewPanelSerializer {
       DashboardWebviewProvider.currentPanel.reveal(vscode.ViewColumn.Beside);
       // Refresh the panel with latest data
       if (DashboardWebviewProvider.provider) {
-        // Reset selection to show latest file when showing panel
-        DashboardWebviewProvider.provider.selectedFileIndex = -1;
         DashboardWebviewProvider.provider.update();
       }
     } else {
@@ -149,64 +148,55 @@ export class DashboardWebviewProvider implements vscode.WebviewPanelSerializer {
     const userId = this.storageService.getUserId();
     const analytics = await this.apiClient.getUserAnalytics(userId);
     const errorHistory = this.storageService.getErrorHistory();
-    let analysisHistory = this.storageService.getAnalysisHistory();
+    const analysisHistory = this.storageService.getAnalysisHistory();
 
-    // Filter out test/demo files from analysis history
-    const testFilePatterns = [
-      /^test/i,
-      /test$/i,
-      /testfail/i,
-      /demo/i,
-      /sample/i,
-      /fixture/i,
-      /mock/i,
-      /_old/i,
-      /temp/i,
-      /tmp/i,
-      /example/i,
-      /\btest\b/i,
-    ];
-
-    analysisHistory = analysisHistory.filter(f => {
-      const fileName = f.fileName ? f.fileName.split('\\').pop()?.split('/').pop() || '' : '';
-      return !testFilePatterns.some(pattern => pattern.test(fileName));
-    });
+    // Discover Python files in workspace
+    this.discoveredFiles = await this.discoverPythonFiles();
 
     // ONLY show content if there's REAL analysis history
     const hasAnalysis = analysisHistory && analysisHistory.length > 0;
     
     // Calculate AI-driven statistics ONLY if there's analysis
     const stats = hasAnalysis ? this.calculateAIStats(analysisHistory, errorHistory) : null;
+    const currentFile = hasAnalysis ? analysisHistory[analysisHistory.length - 1] : null;
     
-    // Use selected file index if set, otherwise use last file
-    const fileIndex = this.selectedFileIndex >= 0 && this.selectedFileIndex < analysisHistory.length 
-      ? this.selectedFileIndex 
-      : analysisHistory.length - 1;
-    
-    const currentFile = hasAnalysis ? analysisHistory[fileIndex] : null;
-    
-    // Generate file list - show only analyzed error files
+    // Generate file list - combine analyzed files and discovered files
     let fileListHtml = "";
     
     if (hasAnalysis) {
-      // Show error files from scan
+      // Show analyzed files first
       fileListHtml = analysisHistory.map((f, idx) => {
         const fileName = f.fileName ? f.fileName.split('\\').pop().split('/').pop() : `File ${idx + 1}`;
-        const errorIcon = f.errorScore > 0 ? '⚠️' : '✓';
-        const isSelected = idx === fileIndex ? 'selected' : '';
-        return `<option value="analyzed-${idx}" ${isSelected}>${errorIcon} ${fileName}</option>`;
+        return `<option value="analyzed-${idx}">✓ ${fileName}</option>`;
       }).join("");
+    }
+    
+    // Add discovered files
+    const analyzedPaths = new Set(analysisHistory.map(f => f.fileName));
+    this.discoveredFiles.forEach((file) => {
+      const fsPath = file.fsPath;
+      if (!analyzedPaths.has(fsPath)) {
+        const fileName = fsPath.split('\\').pop()?.split('/').pop() || "Unknown";
+        fileListHtml += `<option value="file-${fsPath}">📄 ${fileName}</option>`;
+      }
+    });
+
+    // Get the file to display - either selected file or most recent
+    let fileToDisplay = currentFile;
+    if (hasAnalysis && this.selectedFileIndex >= 0 && this.selectedFileIndex < analysisHistory.length) {
+      fileToDisplay = analysisHistory[this.selectedFileIndex];
+      console.log('📍 Displaying selected file:', fileToDisplay.fileName);
     }
 
     // Generate content ONLY if there's REAL AI analysis data
-    const fileInfoContent = hasAnalysis && currentFile ? `
+    const fileInfoContent = hasAnalysis && fileToDisplay ? `
           <!-- File Info Card -->
           <div class="file-info-card">
             <div class="file-header">
               <div class="file-icon">📄</div>
               <div class="file-details">
-                <div class="file-name">${currentFile.fileName ? currentFile.fileName.split('\\').pop().split('/').pop() : "Unknown file"}</div>
-                <div class="file-stats">${currentFile.lines || 0} lines | ${currentFile.functions || 0} function | ${currentFile.classes || 0} classes</div>
+                <div class="file-name">${fileToDisplay.fileName ? fileToDisplay.fileName.split('\\').pop().split('/').pop() : "Unknown file"}</div>
+                <div class="file-stats">${fileToDisplay.lines || 0} lines | ${fileToDisplay.functions || 0} function | ${fileToDisplay.classes || 0} classes</div>
               </div>
             </div>
 
@@ -214,72 +204,36 @@ export class DashboardWebviewProvider implements vscode.WebviewPanelSerializer {
             <div class="stats-grid">
               <div class="stat-card">
                 <div class="stat-title">Error Score</div>
-                <div class="stat-value">${stats ? stats.errorScore : 0}</div>
+                <div class="stat-value">${fileToDisplay.errorScore || 0}</div>
               </div>
               <div class="stat-card">
                 <div class="stat-title">Code Quality</div>
-                <div class="stat-value">${stats ? stats.codeQualityScore : 0}</div>
+                <div class="stat-value">${fileToDisplay.codeQualityScore || 0}</div>
               </div>
               <div class="stat-card">
                 <div class="stat-title">Optimization</div>
-                <div class="stat-value">${stats ? stats.optimizationScore : 0}</div>
+                <div class="stat-value">${fileToDisplay.optimizationScore || 0}</div>
               </div>
             </div>
 
             <!-- Analysis Summary -->
             <div class="analysis-section">
               <div class="section-header">
-                <div class="section-icon">📝</div>
-                <div class="section-title">Analysis Summary</div>
+                <div class="section-icon">${fileToDisplay.errorScore > 0 ? '⚠️' : '✅'}</div>
+                <div class="section-title">${fileToDisplay.errorScore > 0 ? 'Issues Found' : 'Code Status'}</div>
               </div>
-              <div class="section-text">${
-                (() => {
-                  let summary = currentFile.summary || "No analysis available";
-                  // Show only first sentence (max 120 chars)
-                  const firstSentence = summary.split(/[.!?]/)[0];
-                  return firstSentence.substring(0, 120) + (firstSentence.length > 120 ? '...' : '.');
-                })()
-              }</div>
+              <div class="section-text">${fileToDisplay.errorScore > 0 ? fileToDisplay.summary || "Issues detected in this file" : "✅ Code is correct! No errors found."}</div>
             </div>
 
             <!-- Issues Found -->
             <div class="issues-section">
               <div class="issues-header">
                 <div class="section-icon">⚠️</div>
-                <div class="issues-title">Issues Found (${currentFile.issues ? currentFile.issues.length : 0})</div>
+                <div class="issues-title">Issues Found (${fileToDisplay.issues ? fileToDisplay.issues.length : 0})</div>
               </div>
               <div class="issues-list">${
-                currentFile.issues && currentFile.issues.length > 0
-                  ? currentFile.issues.slice(0, 3).map((issue, idx) => {
-                      let lineNum = '';
-                      let issueText = '';
-                      let fixText = '';
-                      
-                      // Handle object format with line, issue, fix
-                      if (typeof issue === 'object' && issue !== null) {
-                        lineNum = issue.line ? ` Line ${issue.line}` : '';
-                        issueText = issue.issue || issue.message || '';
-                        fixText = issue.fix ? ` → ${issue.fix}` : '';
-                      } else if (typeof issue === 'string') {
-                        // Parse string format like "Line X: description"
-                        const lineMatch = issue.match(/Line\s+(\d+)/i);
-                        lineNum = lineMatch ? ` Line ${lineMatch[1]}` : '';
-                        issueText = issue.replace(/Line\s+\d+[\s:]*/i, '').trim();
-                      } else {
-                        issueText = String(issue);
-                      }
-                      
-                      // Truncate text if too long
-                      const maxLen = 80;
-                      if (issueText.length > maxLen) {
-                        issueText = issueText.substring(0, maxLen) + '...';
-                      }
-                      
-                      return '<div class="issue-item">' + 
-                        (lineNum ? '<span style="color: #60a5fa; font-weight: 600;">' + lineNum + ':</span> ' : '') + 
-                        issueText + 
-                        '</div>';
-                    }).join("") + (currentFile.issues.length > 3 ? `<div class="issue-item" style="color: #999; padding-top: 8px;">+ ${currentFile.issues.length - 3} more issue${currentFile.issues.length > 4 ? 's' : ''}</div>` : '')
+                fileToDisplay.issues && fileToDisplay.issues.length > 0 
+                  ? fileToDisplay.issues.map(e => `<div class="issue-item">• ${e.message || e.type || "Unknown issue"}</div>`).join("")
                   : "<div class=\"issue-item\">No issues found in this file</div>"
               }</div>
             </div>
@@ -303,10 +257,17 @@ export class DashboardWebviewProvider implements vscode.WebviewPanelSerializer {
     ` : `
           <!-- Empty State -->
           <div class="empty-state">
-            <div class="empty-icon">�</div>
-            <div class="empty-title">Scan Your Codebase for Errors</div>
-            <div class="empty-text">Press <strong>Ctrl+Shift+Z</strong> to scan all files and detect errors using AI analysis.</div>
-            <div class="empty-text" style="font-size: 12px; color: #6B7280; margin-top: 8px;">The scan will use your API key to analyze code and find all error files in your workspace.</div>
+            <div class="empty-icon">📊</div>
+            <div class="empty-title">No Files Analyzed Yet</div>
+            <div class="empty-text">Select a file and press Ctrl+Shift+Z to analyze it, or press Ctrl+Shift+Z with no file selected to scan workspace</div>
+            <div style="margin-top: 24px; padding: 12px; background-color: rgba(2, 170, 233, 0.1); border-left: 3px solid #02AAE9; border-radius: 4px; text-align: left; max-width: 100%;">
+              <div style="font-size: 12px; color: #60a5fa; font-weight: 500; margin-bottom: 6px;">💡 How to use</div>
+              <div style="font-size: 12px; color: #9CA3AF; line-height: 1.5;">
+                <strong>Single File:</strong> Open a file and press Ctrl+Shift+Z<br>
+                <strong>Workspace:</strong> Press Ctrl+Shift+Z with no file open<br>
+                Shows ALL files - both errors and clean code stats
+              </div>
+            </div>
           </div>
     `;
 
@@ -466,33 +427,6 @@ export class DashboardWebviewProvider implements vscode.WebviewPanelSerializer {
             transform: scale(0.95);
           }
 
-          .refresh-btn {
-            background-color: transparent;
-            border: 2px solid #6B7280;
-            border-radius: 6px;
-            padding: 6px 10px;
-            cursor: pointer;
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 16px;
-            transition: all 0.2s ease;
-            min-width: 40px;
-            min-height: 40px;
-          }
-
-          .refresh-btn:hover {
-            background-color: rgba(59, 130, 246, 0.2);
-            border-color: #3b82f6;
-            transform: rotate(180deg);
-          }
-
-          .refresh-btn:active {
-            background-color: rgba(59, 130, 246, 0.3);
-            transform: rotate(180deg) scale(0.95);
-          }
-
           .file-info-card {
             background-color: #0f0f0f;
             border: 2px solid #6B7280;
@@ -606,13 +540,6 @@ export class DashboardWebviewProvider implements vscode.WebviewPanelSerializer {
             font-size: 14px;
             color: #9CA3AF;
             letter-spacing: 0.3px;
-            line-height: 1.5;
-            max-height: 60px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
           }
 
           .issues-section {
@@ -708,13 +635,6 @@ export class DashboardWebviewProvider implements vscode.WebviewPanelSerializer {
             color: #D1D5DB;
             padding: 6px 0;
             letter-spacing: 0.3px;
-            line-height: 1.4;
-            max-height: 40px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            display: -webkit-box;
-            -webkit-line-clamp: 1;
-            -webkit-box-orient: vertical;
           }
 
           .empty-state {
@@ -756,9 +676,7 @@ export class DashboardWebviewProvider implements vscode.WebviewPanelSerializer {
           <!-- Header -->
           <div class="header">
             <div class="logo-text">DEBUGXIA</div>
-            <div style="display: flex; gap: 12px; align-items: center;">
-              <div class="issue-badge">${hasAnalysis && currentFile && currentFile.issues ? currentFile.issues.length : 0} issue${(hasAnalysis && currentFile && currentFile.issues ? currentFile.issues.length : 0) !== 1 ? 's' : ''}</div>
-            </div>
+            <div class="issue-badge">${errorHistory.length} issue${errorHistory.length !== 1 ? 's' : ''}</div>
           </div>
 
           <!-- File Selector -->
@@ -775,6 +693,7 @@ export class DashboardWebviewProvider implements vscode.WebviewPanelSerializer {
               <span>🔍</span>
               <span>Browse</span>
             </button>
+            <button class="trash-btn" onclick="clearAnalysis()">🗑️</button>
           </div>
 
           ${fileInfoContent}
@@ -789,10 +708,8 @@ export class DashboardWebviewProvider implements vscode.WebviewPanelSerializer {
             console.log('✅ VS Code API acquired successfully');
           } catch (error) {
             console.error('❌ Failed to acquire VS Code API:', error);
-            vscode = null;
           }
 
-          // Refresh dashboard
           // Attach file select dropdown handler immediately (not waiting for DOMContentLoaded)
           function attachFileSelectListener() {
             const fileSelect = document.querySelector('.file-select');
@@ -870,6 +787,19 @@ export class DashboardWebviewProvider implements vscode.WebviewPanelSerializer {
           }
 
           // Clear analysis - delete all history
+          function clearAnalysis() {
+            console.log('🗑️ clearAnalysis() called');
+            const confirmed = confirm('🗑️ Delete all analysis? This cannot be undone.');
+            if (confirmed) {
+              console.log('✅ User confirmed - sending clear-analysis command');
+              vscode.postMessage({
+                command: 'clear-analysis'
+              });
+            } else {
+              console.log('❌ User cancelled delete');
+            }
+          }
+
           // Handle message from extension
           window.addEventListener('message', event => {
             const message = event.data;
@@ -932,9 +862,6 @@ export class DashboardWebviewProvider implements vscode.WebviewPanelSerializer {
         try {
           const result = await vscode.commands.executeCommand('debugxia.analyzeFile', message.filePath);
           console.log('✅ analyze-new-file: Analysis executed, result:', result);
-          
-          // Reset selectedFileIndex to show the newly analyzed file
-          this.selectedFileIndex = -1;
         } catch (error) {
           console.error('❌ analyze-new-file: Error analyzing file:', error);
           vscode.window.showErrorMessage(`Error analyzing file: ${error}`);
@@ -951,9 +878,10 @@ export class DashboardWebviewProvider implements vscode.WebviewPanelSerializer {
             canSelectFolders: false,
             filters: {
               'Python files': ['py'],
+              'JavaScript/TypeScript': ['js', 'ts'],
               'All files': ['*']
             },
-            title: 'Select Python file to analyze'
+            title: 'Select file to analyze'
           });
 
           console.log('📋 File picker returned:', fileUri);
@@ -962,19 +890,28 @@ export class DashboardWebviewProvider implements vscode.WebviewPanelSerializer {
             const selectedFile = fileUri[0].fsPath;
             console.log('✅ User selected file:', selectedFile);
             
-            // Trigger analysis on selected file
-            console.log('📝 browse-files: Executing analyzeFile command with:', selectedFile);
-            const result = await vscode.commands.executeCommand('debugxia.analyzeFile', selectedFile);
-            console.log('✅ browse-files: analyzeFile executed, result:', result);
-            
-            // Reset selectedFileIndex to show the newly analyzed file
-            this.selectedFileIndex = -1;
+            try {
+              // Show analysis in progress
+              vscode.window.showInformationMessage(`Analyzing ${path.basename(selectedFile)}...`, {
+                modal: false,
+                detail: 'Please wait while we analyze this file.'
+              });
+              
+              // Trigger analysis on selected file
+              console.log('📝 browse-files: Executing analyzeFile command with:', selectedFile);
+              const result = await vscode.commands.executeCommand('debugxia.analyzeFile', selectedFile);
+              console.log('✅ browse-files: analyzeFile executed, result:', result);
+            } catch (analysisError) {
+              console.error('❌ Error during file analysis:', analysisError);
+              vscode.window.showErrorMessage(`Analysis failed: ${analysisError}`);
+            }
           } else {
             console.log('❌ browse-files: No file selected by user');
+            vscode.window.showInformationMessage('No file selected');
           }
         } catch (error) {
           console.error('❌ browse-files: Error in browse-files:', error);
-          vscode.window.showErrorMessage(`Error browsing files: ${error}`);
+          vscode.window.showErrorMessage(`Error browsing files: ${error instanceof Error ? error.message : String(error)}`);
         }
         break;
 
@@ -983,13 +920,9 @@ export class DashboardWebviewProvider implements vscode.WebviewPanelSerializer {
         const analysisHistory = this.storageService.getAnalysisHistory();
         if (message.fileIndex >= 0 && message.fileIndex < analysisHistory.length) {
           const selectedFile = analysisHistory[message.fileIndex];
-          console.log('📁 Selected file:', selectedFile.fileName);
-          
-          // Store the selected file index
+          console.log('✅ Selected file:', selectedFile.fileName);
           this.selectedFileIndex = message.fileIndex;
-          console.log('✅ selectedFileIndex set to:', this.selectedFileIndex);
-          
-          // Update panel to show selected file's data
+          // Refresh dashboard to show this file's stats
           await this.update();
         }
         break;
@@ -1010,43 +943,23 @@ export class DashboardWebviewProvider implements vscode.WebviewPanelSerializer {
         break;
 
       case 'clear-analysis':
-        console.log('🗑️ clear-analysis: Starting deletion...');
+        console.log('🗑️ clear-analysis: Clearing analysis history');
         try {
-          console.log('📝 Before clear - Analysis count:', this.storageService.getAnalysisHistory().length);
-          
           await this.storageService.clearAnalysisHistory();
           await this.storageService.clearErrorHistory();
           console.log('✅ clear-analysis: Storage cleared');
-          console.log('📝 After clear - Analysis count:', this.storageService.getAnalysisHistory().length);
-          
-          // Reset selectedFileIndex
-          this.selectedFileIndex = -1;
           
           // Small delay to ensure storage is updated
           await new Promise(r => setTimeout(r, 100));
           
-          // Refresh dashboard HTML
-          console.log('🔄 Updating dashboard view...');
+          // Refresh dashboard
           await this.update();
-          console.log('✅ clear-analysis: Dashboard updated successfully');
+          console.log('✅ clear-analysis: Dashboard refreshed');
           
-          vscode.window.showInformationMessage('✅ All analyzed files deleted');
+          vscode.window.showInformationMessage('✅ All analysis cleared');
         } catch (error) {
           console.error('❌ clear-analysis: Error:', error);
           vscode.window.showErrorMessage(`Error clearing analysis: ${error}`);
-        }
-        break;
-
-      case 'refresh-dashboard':
-        console.log('🔄 refresh-dashboard: Refreshing dashboard');
-        try {
-          // Reset selectedFileIndex to show latest file
-          this.selectedFileIndex = -1;
-          await this.update();
-          console.log('✅ refresh-dashboard: Dashboard refreshed');
-        } catch (error) {
-          console.error('❌ refresh-dashboard: Error:', error);
-          vscode.window.showErrorMessage(`Error refreshing: ${error}`);
         }
         break;
 
